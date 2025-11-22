@@ -649,6 +649,177 @@ pub fn deserialize_state(state: &JsValue) -> Result<(), JsValue> {
 }
 
 // ============================================================================
+// Production Polish (Phase 7)
+// ============================================================================
+
+thread_local! {
+    static ERROR_BOUNDARY_HANDLERS: RefCell<Vec<js_sys::Function>> = RefCell::new(Vec::new());
+    static DEVTOOLS_ENABLED: RefCell<bool> = RefCell::new(false);
+}
+
+/// Create an error boundary to catch component errors
+#[wasm_bindgen(js_name = createErrorBoundary)]
+pub fn create_error_boundary(
+    component: &js_sys::Function,
+    fallback: &js_sys::Function,
+) -> js_sys::Function {
+    let component_clone = component.clone();
+    let fallback_clone = fallback.clone();
+
+    let boundary = Closure::wrap(Box::new(move || -> JsValue {
+        match component_clone.call0(&JsValue::NULL) {
+            Ok(result) => result,
+            Err(error) => {
+                console::error_2(&"Error boundary caught:".into(), &error);
+
+                // Trigger error handlers
+                ERROR_BOUNDARY_HANDLERS.with(|handlers| {
+                    for handler in handlers.borrow().iter() {
+                        let _ = handler.call1(&JsValue::NULL, &error);
+                    }
+                });
+
+                // Return fallback UI
+                fallback_clone.call0(&JsValue::NULL).unwrap_or(JsValue::NULL)
+            }
+        }
+    }) as Box<dyn Fn() -> JsValue>);
+
+    let func = boundary.as_ref().clone();
+    boundary.forget();
+    func.into()
+}
+
+/// Register a global error handler
+#[wasm_bindgen(js_name = onError)]
+pub fn on_error(handler: &js_sys::Function) {
+    ERROR_BOUNDARY_HANDLERS.with(|handlers| {
+        handlers.borrow_mut().push(handler.clone());
+    });
+}
+
+/// Enable DevTools integration
+#[wasm_bindgen(js_name = enableDevTools)]
+pub fn enable_dev_tools() {
+    DEVTOOLS_ENABLED.with(|enabled| {
+        *enabled.borrow_mut() = true;
+    });
+
+    // Expose runtime internals to window for DevTools
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => return,
+    };
+
+    // Create __VELOCITY_DEVTOOLS__ object
+    let devtools = js_sys::Object::new();
+
+    // Expose signal inspection
+    let signals_fn = Closure::wrap(Box::new(|| -> JsValue {
+        RUNTIME.with(|runtime| {
+            let runtime = runtime.borrow();
+            let signals_obj = js_sys::Object::new();
+
+            for (id, state) in runtime.signals.iter() {
+                let signal_info = js_sys::Object::new();
+                js_sys::Reflect::set(&signal_info, &JsValue::from_str("value"), &state.value).ok();
+                js_sys::Reflect::set(&signal_info, &JsValue::from_str("subscribers"), &JsValue::from_f64(state.subscribers.len() as f64)).ok();
+
+                js_sys::Reflect::set(
+                    &signals_obj,
+                    &JsValue::from_str(&format!("signal_{}", id)),
+                    &signal_info,
+                ).ok();
+            }
+
+            signals_obj.into()
+        })
+    }) as Box<dyn Fn() -> JsValue>);
+
+    js_sys::Reflect::set(&devtools, &JsValue::from_str("getSignals"), signals_fn.as_ref()).ok();
+    signals_fn.forget();
+
+    // Expose resource inspection
+    let resources_fn = Closure::wrap(Box::new(|| -> JsValue {
+        RESOURCE_CACHE.with(|cache| {
+            let cache = cache.borrow();
+            let resources_obj = js_sys::Object::new();
+
+            for (key, resource) in cache.iter() {
+                let resource_info = js_sys::Object::new();
+                js_sys::Reflect::set(&resource_info, &JsValue::from_str("data"), &resource.data).ok();
+                js_sys::Reflect::set(&resource_info, &JsValue::from_str("loading"), &JsValue::from_bool(resource.loading)).ok();
+                js_sys::Reflect::set(&resource_info, &JsValue::from_str("timestamp"), &JsValue::from_f64(resource.timestamp)).ok();
+
+                js_sys::Reflect::set(&resources_obj, &JsValue::from_str(key), &resource_info).ok();
+            }
+
+            resources_obj.into()
+        })
+    }) as Box<dyn Fn() -> JsValue>);
+
+    js_sys::Reflect::set(&devtools, &JsValue::from_str("getResources"), resources_fn.as_ref()).ok();
+    resources_fn.forget();
+
+    // Attach to window
+    js_sys::Reflect::set(&window, &JsValue::from_str("__VELOCITY_DEVTOOLS__"), &devtools).ok();
+
+    console::log_1(&"✨ Velocity DevTools enabled".into());
+}
+
+/// Get performance metrics
+#[wasm_bindgen(js_name = getMetrics)]
+pub fn get_metrics() -> JsValue {
+    let metrics = js_sys::Object::new();
+
+    RUNTIME.with(|runtime| {
+        let runtime = runtime.borrow();
+        js_sys::Reflect::set(&metrics, &JsValue::from_str("signalCount"), &JsValue::from_f64(runtime.signals.len() as f64)).ok();
+        js_sys::Reflect::set(&metrics, &JsValue::from_str("effectCount"), &JsValue::from_f64(runtime.effects.len() as f64)).ok();
+    });
+
+    RESOURCE_CACHE.with(|cache| {
+        let cache = cache.borrow();
+        js_sys::Reflect::set(&metrics, &JsValue::from_str("resourceCount"), &JsValue::from_f64(cache.len() as f64)).ok();
+    });
+
+    metrics.into()
+}
+
+/// Log a performance mark for benchmarking
+#[wasm_bindgen(js_name = mark)]
+pub fn mark(name: &str) {
+    if let Some(window) = web_sys::window() {
+        if let Ok(performance) = js_sys::Reflect::get(&window, &JsValue::from_str("performance")) {
+            let performance: web_sys::Performance = performance.into();
+            let _ = performance.mark(name);
+        }
+    }
+}
+
+/// Measure performance between two marks
+#[wasm_bindgen(js_name = measure)]
+pub fn measure(name: &str, start_mark: &str, end_mark: &str) -> f64 {
+    if let Some(window) = web_sys::window() {
+        if let Ok(performance) = js_sys::Reflect::get(&window, &JsValue::from_str("performance")) {
+            let performance: web_sys::Performance = performance.into();
+            // measure_with_start_mark_and_end_mark returns Result<(), JsValue>
+            // We need to get the measure entry from getEntriesByName
+            if performance.measure_with_start_mark_and_end_mark(name, start_mark, end_mark).is_ok() {
+                let entries = performance.get_entries_by_name(name);
+                if entries.length() > 0 {
+                    let entry = entries.get(entries.length() - 1);
+                    if let Ok(measure) = entry.dyn_into::<web_sys::PerformanceMeasure>() {
+                        return measure.duration();
+                    }
+                }
+            }
+        }
+    }
+    0.0
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
