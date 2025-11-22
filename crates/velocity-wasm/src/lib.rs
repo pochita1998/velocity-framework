@@ -507,6 +507,148 @@ pub fn clear_resource_cache() {
 }
 
 // ============================================================================
+// SSR Support (Phase 6)
+// ============================================================================
+
+/// Render component to HTML string for SSR
+#[wasm_bindgen(js_name = renderToString)]
+pub fn render_to_string(component: &js_sys::Function) -> Result<String, JsValue> {
+    // Create a virtual DOM context for SSR
+    let result = component.call0(&JsValue::NULL)?;
+
+    // Convert the result to HTML string
+    // In a full implementation, this would traverse the component tree
+    // and generate HTML with hydration markers
+
+    Ok(format!(
+        "<!DOCTYPE html>\
+         <html>\
+         <head><title>Velocity SSR</title></head>\
+         <body>\
+         <div id=\"root\" data-server-rendered=\"true\">{}</div>\
+         <script type=\"module\" src=\"/velocity-runtime.js\"></script>\
+         </body>\
+         </html>",
+        result.as_string().unwrap_or_default()
+    ))
+}
+
+/// Render component to readable stream for streaming SSR
+#[wasm_bindgen(js_name = renderToStream)]
+pub fn render_to_stream(component: &js_sys::Function) -> Result<JsValue, JsValue> {
+    // This would return a ReadableStream in a full implementation
+    // For now, return the HTML as a promise
+    let html = render_to_string(component)?;
+    let promise = js_sys::Promise::resolve(&JsValue::from_str(&html));
+    Ok(promise.into())
+}
+
+/// Hydrate server-rendered content on the client
+#[wasm_bindgen(js_name = hydrateRoot)]
+pub fn hydrate_root(container_id: &str) -> Result<(), JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    let container = document
+        .get_element_by_id(container_id)
+        .ok_or("Container not found")?;
+
+    // Mark as hydrated
+    container.set_attribute("data-hydrated", "true")?;
+
+    // Find and hydrate all islands
+    let islands = get_islands_to_hydrate()?;
+
+    console::log_1(&format!("Hydrating {} island(s)", islands.length()).into());
+
+    for i in 0..islands.length() {
+        let island = islands.get(i);
+        if let Ok(element) = island.dyn_into::<Element>() {
+            mark_hydrated(&element)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Check if running in SSR context (no window)
+#[wasm_bindgen(js_name = isSSR)]
+pub fn is_ssr() -> bool {
+    web_sys::window().is_none()
+}
+
+/// Serialize app state for hydration
+#[wasm_bindgen(js_name = serializeState)]
+pub fn serialize_state() -> JsValue {
+    let state = js_sys::Object::new();
+
+    // Serialize all signals
+    RUNTIME.with(|runtime| {
+        let runtime = runtime.borrow();
+        let signals_obj = js_sys::Object::new();
+
+        for (id, signal_state) in runtime.signals.iter() {
+            let key = format!("signal_{}", id);
+            js_sys::Reflect::set(
+                &signals_obj,
+                &JsValue::from_str(&key),
+                &signal_state.value,
+            ).ok();
+        }
+
+        js_sys::Reflect::set(&state, &JsValue::from_str("signals"), &signals_obj).ok();
+    });
+
+    // Serialize resource cache
+    RESOURCE_CACHE.with(|cache| {
+        let cache = cache.borrow();
+        let resources_obj = js_sys::Object::new();
+
+        for (key, resource) in cache.iter() {
+            let resource_obj = js_sys::Object::new();
+            js_sys::Reflect::set(&resource_obj, &JsValue::from_str("data"), &resource.data).ok();
+            js_sys::Reflect::set(&resource_obj, &JsValue::from_str("loading"), &JsValue::from_bool(resource.loading)).ok();
+
+            js_sys::Reflect::set(
+                &resources_obj,
+                &JsValue::from_str(key),
+                &resource_obj,
+            ).ok();
+        }
+
+        js_sys::Reflect::set(&state, &JsValue::from_str("resources"), &resources_obj).ok();
+    });
+
+    state.into()
+}
+
+/// Deserialize and restore app state during hydration
+#[wasm_bindgen(js_name = deserializeState)]
+pub fn deserialize_state(state: &JsValue) -> Result<(), JsValue> {
+    let state_obj = js_sys::Object::from(state.clone());
+
+    // Restore signals
+    if let Ok(signals) = js_sys::Reflect::get(&state_obj, &JsValue::from_str("signals")) {
+        let signals_obj = js_sys::Object::from(signals);
+        let keys = js_sys::Object::keys(&signals_obj);
+
+        for i in 0..keys.length() {
+            if let Some(key) = keys.get(i).as_string() {
+                if let Some(id_str) = key.strip_prefix("signal_") {
+                    if let Ok(id) = id_str.parse::<usize>() {
+                        if let Ok(value) = js_sys::Reflect::get(&signals_obj, &JsValue::from_str(&key)) {
+                            deserialize_signal_state(id, value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
