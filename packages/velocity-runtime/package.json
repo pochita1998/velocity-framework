@@ -1,0 +1,28 @@
+{
+  "name": "velocity-runtime",
+  "version": "0.1.0",
+  "description": "Velocity framework runtime with fine-grained reactivity",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && cp src/global.d.ts dist/global.d.ts",
+    "dev": "tsc --watch",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "velocity-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "velocity_wasm_bg.wasm",
+    "velocity_wasm.js",
+    "velocity_wasm.d.ts"
+  ],
+  "main": "velocity_wasm.js",
+  "types": "velocity_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test 3 - Debug</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    #root {
+      background: white;
+      color: black;
+      padding: 2rem;
+      border-radius: 1rem;
+      min-height: 200px;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    #log {
+      margin-top: 2rem;
+      background: #1e1e1e;
+      color: #4ec9b0;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Velocity Test 3 - Detailed Debug</h1>
+  <div id="root"></div>
+  <div id="log"></div>
+
+  <script type="module">
+    const logDiv = document.getElementById('log');
+    function log(msg) {
+      console.log(msg);
+      logDiv.innerHTML += `<div>${msg}</div>`;
+    }
+
+    import { createSignal, render, createElement, initWasm, createEffect } from './src/velocity-wasm-runtime.ts';
+
+    log('1. Initializing WASM...');
+    await initWasm();
+    log('2. ✅ WASM initialized');
+
+    log('3. Creating signal with initial value 0...');
+    const [count, setCount] = createSignal(0);
+    log('4. ✅ Signal created');
+
+    log('5. Testing signal get...');
+    const initialValue = count();
+    log(`6. Initial value: ${initialValue}`);
+
+    log('7. Testing effect...');
+    let effectRuns = 0;
+    createEffect(() => {
+      effectRuns++;
+      const val = count();
+      log(`   Effect run #${effectRuns}, count = ${val}`);
+    });
+    log('8. Effect created');
+
+    log('9. Setting count to 5...');
+    setCount(5);
+    log('10. After set, count() = ' + count());
+
+    log('11. Creating element manually...');
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Manual Counter';
+
+    const p = document.createElement('p');
+    const textNode = document.createTextNode('');
+    p.appendChild(document.createTextNode('Count: '));
+    p.appendChild(textNode);
+
+    log('12. Setting up effect for text node...');
+    createEffect(() => {
+      const val = count();
+      textNode.textContent = String(val);
+      log(`   Text node updated to: ${val}`);
+    });
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Increment';
+    btn.onclick = () => {
+      const newVal = count() + 1;
+      log(`13. Button clicked, setting count to ${newVal}`);
+      setCount(newVal);
+    };
+
+    const container = document.createElement('div');
+    container.appendChild(h2);
+    container.appendChild(p);
+    container.appendChild(btn);
+
+    log('14. Appending to root...');
+    document.getElementById('root').appendChild(container);
+    log('15. ✅ Done!');
+  </script>
+</body>
+</html>

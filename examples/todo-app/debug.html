@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WASM Debug</title>
+</head>
+<body>
+  <h1>WASM Debug</h1>
+  <div id="output"></div>
+  <script type="module">
+    import init, { createSignal, createEffect } from './src/wasm/velocity_wasm.js';
+
+    async function test() {
+      try {
+        console.log('Init WASM...');
+        await init();
+        console.log('✅ WASM initialized');
+
+        console.log('Creating signal...');
+        const result = createSignal(42);
+        console.log('Signal result:', result);
+        console.log('Result type:', typeof result);
+        console.log('Is array?', Array.isArray(result));
+
+        if (Array.isArray(result)) {
+          const [get, set] = result;
+          console.log('Getter:', typeof get, get);
+          console.log('Setter:', typeof set, set);
+
+          console.log('Calling getter...');
+          const value = get();
+          console.log('Value:', value);
+
+          document.getElementById('output').innerHTML = `
+            <p>✅ WASM Works!</p>
+            <p>Initial value: ${value}</p>
+          `;
+
+          console.log('Setting new value...');
+          set(100);
+          const newValue = get();
+          console.log('New value:', newValue);
+
+          document.getElementById('output').innerHTML += `<p>New value: ${newValue}</p>`;
+        }
+      } catch (e) {
+        console.error('Error:', e);
+        document.getElementById('output').innerHTML = `<p style="color:red">Error: ${e.message}</p>`;
+      }
+    }
+
+    test();
+  </script>
+</body>
+</html>

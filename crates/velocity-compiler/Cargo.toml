@@ -1,0 +1,28 @@
+[package]
+name = "velocity-compiler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Core utilities
+anyhow.workspace = true
+thiserror.workspace = true
+# Pin serde to version before __private was removed (fixes swc_common compatibility)
+serde = { version = "=1.0.210", features = ["derive"] }
+serde_json.workspace = true
+
+# SWC - use latest version that has serde compatibility fixed
+# Note: This is a much newer version but should work
+swc_core = { version = "0.103", features = [
+    "ecma_parser",
+    "ecma_transforms",
+    "ecma_codegen",
+    "ecma_visit",
+    "ecma_ast",
+    "common"
+] }
+
+# Path handling
+pathdiff = "0.2"

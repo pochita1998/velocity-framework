@@ -1,0 +1,30 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const __wbg_signal_free: (a: number, b: number) => void;
+export const addClass: (a: any, b: number, c: number) => [number, number];
+export const appendChild: (a: any, b: any) => [number, number];
+export const createEffect: (a: any) => void;
+export const createElement: (a: number, b: number) => [number, number, number];
+export const createSignal: (a: any) => [number, number];
+export const createTextNode: (a: number, b: number) => [number, number, number];
+export const greet: (a: number, b: number) => void;
+export const removeClass: (a: any, b: number, c: number) => [number, number];
+export const setAttribute: (a: any, b: number, c: number, d: number, e: number) => [number, number];
+export const setText: (a: any, b: number, c: number) => void;
+export const signal_get: (a: number) => any;
+export const signal_new: (a: any) => number;
+export const signal_set: (a: number, b: any) => void;
+export const main: () => void;
+export const wasm_bindgen__convert__closures_____invoke__hb8c0e498495b0aad: (a: number, b: number) => any;
+export const wasm_bindgen__closure__destroy__h0281d76ef968f9d1: (a: number, b: number) => void;
+export const wasm_bindgen__convert__closures_____invoke__h14f275fd79d55e8b: (a: number, b: number, c: any) => void;
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __externref_table_dealloc: (a: number) => void;
+export const __externref_drop_slice: (a: number, b: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;
