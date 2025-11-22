@@ -80,6 +80,19 @@ enum Commands {
         no_optimize: bool,
     },
 
+    /// Analyze bundle size and dependencies
+    Analyze {
+        #[arg(short, long, default_value = ".")]
+        root: String,
+
+        #[arg(short, long, default_value = "dist")]
+        out_dir: String,
+
+        /// Output format: text, json
+        #[arg(short, long, default_value = "text")]
+        format: String,
+    },
+
     /// Show version and build information
     Info,
 }
@@ -241,6 +254,156 @@ fn compile_file(
     Ok(())
 }
 
+/// Analyze bundle size and provide optimization suggestions
+fn analyze_bundle(root: &str, out_dir: &str, format: &str) -> anyhow::Result<()> {
+    use walkdir::WalkDir;
+    use serde::Serialize;
+
+    let root_path = PathBuf::from(root);
+    let dist_path = root_path.join(out_dir);
+
+    // Check if dist directory exists
+    if !dist_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Output directory not found: {}\nRun 'velocity build' first.",
+            dist_path.display()
+        ));
+    }
+
+    #[derive(Serialize, Clone)]
+    struct FileInfo {
+        path: String,
+        size: u64,
+        size_kb: f64,
+        percentage: f64,
+    }
+
+    #[derive(Serialize)]
+    struct BundleAnalysis {
+        total_size: u64,
+        total_size_kb: f64,
+        file_count: usize,
+        files: Vec<FileInfo>,
+        largest_files: Vec<FileInfo>,
+    }
+
+    // Collect all JS files with their sizes
+    let mut files = Vec::new();
+    let mut total_size: u64 = 0;
+
+    for entry in WalkDir::new(&dist_path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(ext) = path.extension() {
+                if ext == "js" {
+                    let metadata = fs::metadata(path)?;
+                    let size = metadata.len();
+                    total_size += size;
+
+                    let relative_path = path
+                        .strip_prefix(&dist_path)
+                        .unwrap_or(path)
+                        .to_string_lossy()
+                        .to_string();
+
+                    files.push(FileInfo {
+                        path: relative_path,
+                        size,
+                        size_kb: size as f64 / 1024.0,
+                        percentage: 0.0, // Will calculate after total is known
+                    });
+                }
+            }
+        }
+    }
+
+    // Calculate percentages
+    for file in &mut files {
+        file.percentage = (file.size as f64 / total_size as f64) * 100.0;
+    }
+
+    // Sort by size (largest first)
+    files.sort_by(|a, b| b.size.cmp(&a.size));
+
+    // Get top 10 largest files
+    let largest_files: Vec<FileInfo> = files.iter().take(10).cloned().collect();
+
+    let analysis = BundleAnalysis {
+        total_size,
+        total_size_kb: total_size as f64 / 1024.0,
+        file_count: files.len(),
+        files: files.clone(),
+        largest_files,
+    };
+
+    // Output based on format
+    match format {
+        "json" => {
+            let json = serde_json::to_string_pretty(&analysis)?;
+            println!("{}", json);
+        }
+        _ => {
+            // Text format (default)
+            println!();
+            println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_blue());
+            println!("{} {}", "📊".bright_yellow(), "Bundle Analysis Report".bright_cyan().bold());
+            println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_blue());
+            println!();
+            println!("{} {}", "📂 Output Directory:".bright_white(), dist_path.display());
+            println!("{} {} files", "📄 Total Files:".bright_white(), analysis.file_count);
+            println!(
+                "{} {:.2} KB ({} bytes)",
+                "📦 Total Size:".bright_white(),
+                analysis.total_size_kb,
+                analysis.total_size
+            );
+            println!();
+
+            if !analysis.largest_files.is_empty() {
+                println!("{}", "🔝 Largest Files:".bright_white().bold());
+                for (i, file) in analysis.largest_files.iter().enumerate() {
+                    let bar_len = (file.percentage / 2.0) as usize;
+                    let bar = "█".repeat(bar_len.min(50));
+
+                    println!(
+                        "  {}. {} {:.2} KB ({:.1}%)",
+                        (i + 1).to_string().bright_black(),
+                        file.path.bright_cyan(),
+                        file.size_kb,
+                        file.percentage
+                    );
+                    println!("     {}", bar.green());
+                }
+                println!();
+            }
+
+            // Optimization suggestions
+            println!("{}", "💡 Optimization Suggestions:".bright_white().bold());
+
+            if analysis.total_size_kb > 500.0 {
+                println!("  {} Consider code splitting for large bundles", "•".bright_yellow());
+            }
+
+            if analysis.largest_files.first().map(|f| f.percentage).unwrap_or(0.0) > 50.0 {
+                println!("  {} Largest file is >50% of bundle - consider splitting", "•".bright_yellow());
+            }
+
+            println!("  {} Run with --minify flag to reduce file sizes", "•".bright_green());
+            println!("  {} Enable gzip/brotli compression in production", "•".bright_green());
+            println!("  {} Use dynamic imports for route-based code splitting", "•".bright_green());
+
+            println!();
+            println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_blue());
+        }
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
@@ -297,6 +460,11 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::Dev { port, root } => {
             dev_server::start_dev_server(port, root).await?;
+        }
+
+        Commands::Analyze { root, out_dir, format } => {
+            println!("📊 Analyzing bundle from {}...", root);
+            analyze_bundle(&root, &out_dir, &format)?;
         }
 
         Commands::Info => {
