@@ -354,6 +354,159 @@ pub fn get_islands_to_hydrate() -> Result<js_sys::Array, JsValue> {
 }
 
 // ============================================================================
+// Data Layer (Phase 5) - Resource Management
+// ============================================================================
+
+type ResourceId = usize;
+
+thread_local! {
+    static RESOURCE_CACHE: RefCell<HashMap<String, ResourceState>> = RefCell::new(HashMap::new());
+    static NEXT_RESOURCE_ID: RefCell<ResourceId> = RefCell::new(0);
+}
+
+struct ResourceState {
+    data: JsValue,
+    loading: bool,
+    error: Option<String>,
+    timestamp: f64,
+    refetch_fn: Option<js_sys::Function>,
+}
+
+/// Create a resource for async data fetching
+#[wasm_bindgen(js_name = createResource)]
+pub fn create_resource(
+    key: &str,
+    fetcher: &js_sys::Function,
+) -> js_sys::Array {
+    // Check cache first
+    let cached = RESOURCE_CACHE.with(|cache| {
+        cache.borrow().get(key).map(|state| {
+            let result = js_sys::Array::new();
+            result.push(&state.data);
+            result.push(&JsValue::from_bool(state.loading));
+            result.push(&state.error.clone().map(|e| JsValue::from_str(&e)).unwrap_or(JsValue::NULL));
+            result
+        })
+    });
+
+    if let Some(cached_result) = cached {
+        return cached_result;
+    }
+
+    // Initialize loading state
+    RESOURCE_CACHE.with(|cache| {
+        cache.borrow_mut().insert(key.to_string(), ResourceState {
+            data: JsValue::NULL,
+            loading: true,
+            error: None,
+            timestamp: js_sys::Date::now(),
+            refetch_fn: Some(fetcher.clone()),
+        });
+    });
+
+    // Return initial loading state
+    let result = js_sys::Array::new();
+    result.push(&JsValue::NULL);
+    result.push(&JsValue::from_bool(true));
+    result.push(&JsValue::NULL);
+
+    // Trigger async fetch
+    let key_clone = key.to_string();
+    let fetcher_clone = fetcher.clone();
+
+    wasm_bindgen_futures::spawn_local(async move {
+        match call_async_fetcher(&fetcher_clone).await {
+            Ok(data) => {
+                RESOURCE_CACHE.with(|cache| {
+                    if let Some(state) = cache.borrow_mut().get_mut(&key_clone) {
+                        state.data = data;
+                        state.loading = false;
+                        state.error = None;
+                        state.timestamp = js_sys::Date::now();
+                    }
+                });
+            }
+            Err(err) => {
+                RESOURCE_CACHE.with(|cache| {
+                    if let Some(state) = cache.borrow_mut().get_mut(&key_clone) {
+                        state.loading = false;
+                        state.error = Some(format!("{:?}", err));
+                        state.timestamp = js_sys::Date::now();
+                    }
+                });
+            }
+        }
+    });
+
+    result
+}
+
+async fn call_async_fetcher(fetcher: &js_sys::Function) -> Result<JsValue, JsValue> {
+    let promise = fetcher.call0(&JsValue::NULL)?;
+    let promise = js_sys::Promise::from(promise);
+    wasm_bindgen_futures::JsFuture::from(promise).await
+}
+
+/// Invalidate a resource cache entry
+#[wasm_bindgen(js_name = invalidateResource)]
+pub fn invalidate_resource(key: &str) {
+    RESOURCE_CACHE.with(|cache| {
+        cache.borrow_mut().remove(key);
+    });
+}
+
+/// Refetch a resource
+#[wasm_bindgen(js_name = refetchResource)]
+pub fn refetch_resource(key: &str) {
+    let fetcher = RESOURCE_CACHE.with(|cache| {
+        cache.borrow().get(key).and_then(|state| state.refetch_fn.clone())
+    });
+
+    if let Some(fetcher) = fetcher {
+        invalidate_resource(key);
+        create_resource(key, &fetcher);
+    }
+}
+
+/// Update resource with optimistic value
+#[wasm_bindgen(js_name = setResourceOptimistic)]
+pub fn set_resource_optimistic(key: &str, value: JsValue) {
+    RESOURCE_CACHE.with(|cache| {
+        if let Some(state) = cache.borrow_mut().get_mut(key) {
+            state.data = value;
+        }
+    });
+}
+
+/// Get current resource state
+#[wasm_bindgen(js_name = getResourceState)]
+pub fn get_resource_state(key: &str) -> js_sys::Array {
+    RESOURCE_CACHE.with(|cache| {
+        if let Some(state) = cache.borrow().get(key) {
+            let result = js_sys::Array::new();
+            result.push(&state.data);
+            result.push(&JsValue::from_bool(state.loading));
+            result.push(&state.error.clone().map(|e| JsValue::from_str(&e)).unwrap_or(JsValue::NULL));
+            result
+        } else {
+            let result = js_sys::Array::new();
+            result.push(&JsValue::NULL);
+            result.push(&JsValue::from_bool(false));
+            result.push(&JsValue::NULL);
+            result
+        }
+    })
+}
+
+/// Clear all resource caches
+#[wasm_bindgen(js_name = clearResourceCache)]
+pub fn clear_resource_cache() {
+    RESOURCE_CACHE.with(|cache| {
+        cache.borrow_mut().clear();
+    });
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
