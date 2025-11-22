@@ -189,38 +189,46 @@ impl JsxTransformer {
 }
 
 impl VisitMut for JsxTransformer {
-    /// Transform JSX elements in return statements
-    fn visit_mut_return_stmt(&mut self, stmt: &mut ReturnStmt) {
-        if let Some(arg) = &mut stmt.arg {
-            match &mut **arg {
-                Expr::JSXElement(elem) => {
-                    let transformed = self.transform_jsx_element(elem);
-                    **arg = transformed;
-                }
-                Expr::JSXFragment(_frag) => {
-                    // Handle fragments
-                    // Simplified for now
-                }
-                _ => {}
-            }
+    /// Transform all JSX expressions wherever they appear
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        // First, recursively visit children to transform nested JSX
+        expr.visit_mut_children_with(self);
+
+        // Then transform this expression if it's JSX
+        if let Expr::JSXElement(elem) = expr {
+            let transformed = self.transform_jsx_element(elem);
+            *expr = transformed;
+        } else if let Expr::JSXFragment(_frag) = expr {
+            // Handle fragments - for now, create an empty div
+            *expr = Expr::Call(CallExpr {
+                span: Default::default(),
+                ctxt: Default::default(),
+                callee: Callee::Expr(Box::new(Expr::Ident(Ident {
+                    span: Default::default(),
+                    ctxt: Default::default(),
+                    sym: "createElement".into(),
+                    optional: false,
+                }))),
+                args: vec![
+                    ExprOrSpread {
+                        spread: None,
+                        expr: Box::new(Expr::Lit(Lit::Str(Str {
+                            span: Default::default(),
+                            value: "div".into(),
+                            raw: None,
+                        }))),
+                    },
+                    ExprOrSpread {
+                        spread: None,
+                        expr: Box::new(Expr::Object(ObjectLit {
+                            span: Default::default(),
+                            props: vec![],
+                        })),
+                    },
+                ],
+                type_args: None,
+            });
         }
-
-        stmt.visit_mut_children_with(self);
-    }
-
-    /// Transform JSX in variable declarations
-    fn visit_mut_var_declarator(&mut self, decl: &mut VarDeclarator) {
-        if let Some(init) = &mut decl.init {
-            match &mut **init {
-                Expr::JSXElement(elem) => {
-                    let transformed = self.transform_jsx_element(elem);
-                    **init = transformed;
-                }
-                _ => {}
-            }
-        }
-
-        decl.visit_mut_children_with(self);
     }
 }
 
