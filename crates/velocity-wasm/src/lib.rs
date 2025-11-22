@@ -284,6 +284,76 @@ pub fn remove_class(element: &Element, class: &str) -> Result<(), JsValue> {
 }
 
 // ============================================================================
+// Hydration Support (Phase 4)
+// ============================================================================
+
+/// Mark a component as an island (interactive zone that needs hydration)
+#[wasm_bindgen(js_name = markIsland)]
+pub fn mark_island(element: &Element, island_id: &str) -> Result<(), JsValue> {
+    element.set_attribute("data-island", island_id)?;
+    element.set_attribute("data-hydrate", "pending")?;
+    Ok(())
+}
+
+/// Serialize signal state for SSR
+#[wasm_bindgen(js_name = serializeSignalState)]
+pub fn serialize_signal_state(signal_id: usize) -> JsValue {
+    RUNTIME.with(|runtime| {
+        let runtime = runtime.borrow();
+        if let Some(signal) = runtime.signals.get(&signal_id) {
+            signal.value.clone()
+        } else {
+            JsValue::NULL
+        }
+    })
+}
+
+/// Deserialize and restore signal state during hydration
+#[wasm_bindgen(js_name = deserializeSignalState)]
+pub fn deserialize_signal_state(signal_id: usize, value: JsValue) {
+    RUNTIME.with(|runtime| {
+        let mut runtime = runtime.borrow_mut();
+        if let Some(signal) = runtime.signals.get_mut(&signal_id) {
+            signal.value = value;
+        }
+    });
+}
+
+/// Check if an element needs hydration
+#[wasm_bindgen(js_name = needsHydration)]
+pub fn needs_hydration(element: &Element) -> bool {
+    element.get_attribute("data-hydrate")
+        .map(|val| val == "pending")
+        .unwrap_or(false)
+}
+
+/// Mark an element as hydrated
+#[wasm_bindgen(js_name = markHydrated)]
+pub fn mark_hydrated(element: &Element) -> Result<(), JsValue> {
+    element.set_attribute("data-hydrate", "complete")?;
+    Ok(())
+}
+
+/// Get all islands in the DOM that need hydration
+#[wasm_bindgen(js_name = getIslandsToHydrate)]
+pub fn get_islands_to_hydrate() -> Result<js_sys::Array, JsValue> {
+    let window = web_sys::window().ok_or("No window")?;
+    let document = window.document().ok_or("No document")?;
+
+    let selector = "[data-hydrate='pending']";
+    let node_list = document.query_selector_all(selector)?;
+
+    let result = js_sys::Array::new();
+    for i in 0..node_list.length() {
+        if let Some(node) = node_list.get(i) {
+            result.push(&node);
+        }
+    }
+
+    Ok(result)
+}
+
+// ============================================================================
 // Initialization
 // ============================================================================
 
