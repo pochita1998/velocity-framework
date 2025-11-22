@@ -32,6 +32,9 @@ pub enum HMRMessage {
         module: String,
         code: String,
         timestamp: u64,
+        /// Modules that depend on this one (for cascade updates)
+        #[serde(skip_serializing_if = "Vec::is_empty", default)]
+        dependents: Vec<String>,
     },
     #[serde(rename = "full-reload")]
     FullReload { reason: String },
@@ -273,6 +276,7 @@ async fn handle_file_change(state: &DevServerState, path: &Path) {
             println!("✅ Compiled {}", module_path);
 
             // Broadcast update
+            // TODO: Implement dependency tracking to populate dependents
             state.broadcast_update(HMRMessage::Update {
                 module: module_path,
                 code,
@@ -280,6 +284,7 @@ async fn handle_file_change(state: &DevServerState, path: &Path) {
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis() as u64,
+                dependents: vec![], // Will be populated with module dependency tracking
             });
         }
         Err(e) => {
