@@ -201,9 +201,9 @@ fn compile_file(
     let source = fs::read_to_string(input)
         .map_err(|e| anyhow::anyhow!("Failed to read {}: {}", input.display(), e))?;
 
-    // Compile
+    // Compile with source map
     let start = Instant::now();
-    let result = compiler.compile(&source, input.to_str().unwrap())?;
+    let result = compiler.compile_with_source_map(&source, input.to_str().unwrap())?;
     let duration = start.elapsed();
 
     if show_time {
@@ -212,14 +212,30 @@ fn compile_file(
 
     // Write output
     if let Some(output_path) = output {
-        fs::write(output_path, result)
+        // Write source map if generated
+        let mut final_code = result.code.clone();
+        if let Some(source_map) = &result.source_map {
+            let map_path = output_path.with_extension("js.map");
+            fs::write(&map_path, source_map)
+                .map_err(|e| anyhow::anyhow!("Failed to write source map {}: {}", map_path.display(), e))?;
+
+            // Append source mapping URL to JavaScript file
+            final_code.push_str(&format!("\n//# sourceMappingURL={}\n", map_path.file_name().unwrap().to_str().unwrap()));
+
+            if show_time {
+                println!("🗺️  Source map written to {}", map_path.display());
+            }
+        }
+
+        // Write JavaScript file with source mapping URL
+        fs::write(output_path, final_code)
             .map_err(|e| anyhow::anyhow!("Failed to write {}: {}", output_path.display(), e))?;
 
         if show_time {
             println!("📝 Output written to {}", output_path.display());
         }
     } else {
-        println!("\n{}", result);
+        println!("\n{}", result.code);
     }
 
     Ok(())

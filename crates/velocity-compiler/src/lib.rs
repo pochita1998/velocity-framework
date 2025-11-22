@@ -17,8 +17,7 @@ pub mod codegen;
 pub mod error;
 
 pub use error::{CompilerError, Result};
-
-use swc_core::ecma::ast::Module;
+pub use codegen::GenerateResult;
 
 /// Compiler configuration
 #[derive(Debug, Clone)]
@@ -84,6 +83,28 @@ impl Compiler {
         let code = codegen::generate(&optimized, &self.options)?;
 
         Ok(code)
+    }
+
+    /// Compile with source map generation
+    pub fn compile_with_source_map(&self, source: &str, filename: &str) -> Result<GenerateResult> {
+        // 1. Parse JSX/TSX → AST
+        let module = parser::parse(source, filename)?;
+
+        // 2. Analyze reactivity
+        let analysis = analyzer::analyze(&module)?;
+
+        // 3. Transform JSX → DOM operations
+        let transformed = transformer::transform(module, &analysis)?;
+
+        // 4. Optimize (if enabled)
+        let optimized = if self.options.optimize {
+            optimizer::optimize(transformed, &analysis)?
+        } else {
+            transformed
+        };
+
+        // 5. Generate JavaScript code with source map
+        codegen::generate_with_source_map(&optimized, &self.options, Some(filename))
     }
 
     /// Compile a file from disk

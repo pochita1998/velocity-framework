@@ -12,6 +12,7 @@ dist-min/
 # Build artifacts
 *.out.js
 *.min.js
+*.js.map
 examples/*/dist/
 examples/*/dist-min/
 

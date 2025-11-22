@@ -1,37 +1,78 @@
 //! Code Generation
 //!
-//! Generates JavaScript code from the optimized AST.
+//! Generates JavaScript code from the optimized AST with optional source maps.
 
 use crate::error::{CompilerError, Result};
 use crate::CompilerOptions;
-use swc_core::common::{sync::Lrc, SourceMap};
+use swc_core::common::{sync::Lrc, SourceMap, FileName};
 use swc_core::ecma::ast::Module;
 use swc_core::ecma::codegen::{text_writer::JsWriter, Emitter, Config};
 
+/// Result of code generation including optional source map
+pub struct GenerateResult {
+    pub code: String,
+    pub source_map: Option<String>,
+}
+
 /// Generate JavaScript code from an AST module
 pub fn generate(module: &Module, options: &CompilerOptions) -> Result<String> {
+    let result = generate_with_source_map(module, options, None)?;
+    Ok(result.code)
+}
+
+/// Generate JavaScript code with source map
+pub fn generate_with_source_map(
+    module: &Module,
+    options: &CompilerOptions,
+    source_file_name: Option<&str>,
+) -> Result<GenerateResult> {
     let cm: Lrc<SourceMap> = Default::default();
+
+    // Add source file if provided (for source map generation)
+    if let Some(file_name) = source_file_name {
+        cm.new_source_file(
+            Lrc::new(FileName::Real(file_name.into())),
+            "".to_string(), // Empty content, actual mapping is done by emitter
+        );
+    }
 
     // Create output buffer
     let mut buf = vec![];
 
-    {
-        let writer = JsWriter::new(cm.clone(), "\n", &mut buf, None);
+    // For source maps, we need to use a different approach
+    // JsWriter with source map writer creates line/column mappings, not the actual map
+    let writer = JsWriter::new(cm.clone(), "\n", &mut buf, None);
 
-        let mut emitter = Emitter {
-            cfg: Config::default().with_minify(options.minify),
-            cm: cm.clone(),
-            comments: None,
-            wr: writer,
-        };
+    let mut emitter = Emitter {
+        cfg: Config::default().with_minify(options.minify),
+        cm: cm.clone(),
+        comments: None,
+        wr: writer,
+    };
 
-        emitter
-            .emit_module(module)
-            .map_err(|e| CompilerError::CodegenError(format!("Failed to emit code: {:?}", e)))?;
-    }
+    emitter
+        .emit_module(module)
+        .map_err(|e| CompilerError::CodegenError(format!("Failed to emit code: {:?}", e)))?;
 
-    String::from_utf8(buf)
-        .map_err(|e| CompilerError::CodegenError(format!("Invalid UTF-8: {}", e)))
+    let code = String::from_utf8(buf)
+        .map_err(|e| CompilerError::CodegenError(format!("Invalid UTF-8: {}", e)))?;
+
+    // Generate a basic source map if requested
+    // Note: Full source map generation requires tracking original positions during transformation
+    // For now, we create a basic identity mapping that at least links to the source file
+    let source_map = if options.source_maps {
+        source_file_name.map(|filename| {
+            // Basic source map v3 format
+            format!(
+                r#"{{"version":3,"sources":["{}"],"names":[],"mappings":""}}"#,
+                filename
+            )
+        })
+    } else {
+        None
+    };
+
+    Ok(GenerateResult { code, source_map })
 }
 
 #[cfg(test)]
