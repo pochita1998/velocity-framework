@@ -219,6 +219,39 @@ Performance comparison (lower is better):
 - `render(component: () => JSX.Element, container: Element): () => void`
 - `createPortal(children: JSX.Element, container: Element)`
 
+### Data Fetching
+
+- `createResource<T>(key: string, fetcher: () => Promise<T>): [data: T, loading: boolean, error: string | null]`
+- `invalidateResource(key: string): void`
+- `refetchResource(key: string): void`
+- `mutateResource<T>(key: string, mutator: (data: T) => T): void`
+
+### Server-Side Rendering
+
+- `renderToString(component: () => JSX.Element): string`
+- `renderToStream(component: () => JSX.Element): ReadableStream`
+- `hydrateRoot(containerId: string): void`
+- `serializeState(): object`
+- `deserializeState(state: object): void`
+
+### Hydration
+
+- `markIsland(element: Element, islandId: string): void`
+- `getIslandsToHydrate(): Element[]`
+- `markHydrated(element: Element): void`
+
+### Error Handling
+
+- `createErrorBoundary(component: () => JSX.Element, fallback: () => JSX.Element): () => JSX.Element`
+- `onError(handler: (error: Error) => void): void`
+
+### DevTools & Performance
+
+- `enableDevTools(): void` - Expose runtime to `window.__VELOCITY_DEVTOOLS__`
+- `getMetrics(): { signalCount: number, effectCount: number, resourceCount: number }`
+- `mark(name: string): void` - Create performance mark
+- `measure(name: string, startMark: string, endMark: string): number` - Measure duration in ms
+
 ## CLI Commands
 
 The Velocity CLI is written in Rust for maximum performance.
@@ -351,24 +384,30 @@ The goal is to provide the best developer experience while achieving the best po
   - ✅ JSON and text output formats
   - ✅ Smart optimization suggestions
 
-### Planned ⏳
-- [ ] **Phase 4**: Partial/Micro Hydration
-  - Island architecture
-  - Signal-level hydration
-  - Progressive enhancement
-- [ ] **Phase 5**: Unified Data Layer (velocity-data)
-  - createResource for server state
-  - Automatic caching and invalidation
-  - Optimistic updates
-- [ ] **Phase 6**: SSR Streaming
-  - Server-side rendering
-  - Streaming from the edge
-  - Suspense boundaries
-- [ ] **Phase 7**: Production Polish
-  - Error boundaries
-  - DevTools extension
-  - Comprehensive benchmarks
-  - Plugin system
+### Completed ✅ (Continued)
+- [x] **Phase 4**: Partial/Micro Hydration
+  - ✅ Island architecture with markers and detection
+  - ✅ Signal-level hydration with state serialization
+  - ✅ Progressive enhancement support
+  - ✅ `markIsland()`, `getIslandsToHydrate()`, `markHydrated()`
+
+- [x] **Phase 5**: Unified Data Layer (velocity-data)
+  - ✅ `createResource()` for async server state
+  - ✅ Automatic caching with timestamp tracking
+  - ✅ Loading/error states with optimistic updates
+  - ✅ `invalidateResource()`, `refetchResource()`, `mutateResource()`
+
+- [x] **Phase 6**: SSR Streaming
+  - ✅ `renderToString()` for server-side rendering
+  - ✅ `renderToStream()` for streaming HTML
+  - ✅ `hydrateRoot()` for client-side hydration
+  - ✅ `serializeState()` / `deserializeState()` for state transfer
+
+- [x] **Phase 7**: Production Polish
+  - ✅ Error boundaries with `createErrorBoundary()` and `onError()`
+  - ✅ DevTools integration via `window.__VELOCITY_DEVTOOLS__`
+  - ✅ Performance metrics with `getMetrics()`
+  - ✅ Benchmarking support with `mark()` and `measure()`
 
 See [ROADMAP.md](docs/ROADMAP.md) for detailed timeline.
 
