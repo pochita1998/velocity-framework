@@ -16,24 +16,29 @@ A blazingly fast JavaScript framework powered by Rust. Velocity combines the fin
 
 ### Installation
 
-Install the Velocity CLI globally:
+**Easy install (recommended):**
 
 ```bash
-cargo install --path crates/velocity-cli
+# Clone and run the installer
+git clone https://github.com/pochita1998/velocity-framework
+cd velocity-framework
+./install.sh
 ```
 
-Or use it directly from this repo:
+The installer will build and install the CLI globally. Make sure `~/.cargo/bin` is in your PATH.
+
+**Manual install:**
 
 ```bash
 # Clone the repository
 git clone https://github.com/pochita1998/velocity-framework
 cd velocity-framework
 
-# Build the CLI
-cargo build --release
-
-# Install globally (optional)
+# Install globally
 cargo install --path crates/velocity-cli
+
+# Add to PATH (if needed)
+export PATH="$HOME/.cargo/bin:$PATH"
 ```
 
 ### Create a New Project
