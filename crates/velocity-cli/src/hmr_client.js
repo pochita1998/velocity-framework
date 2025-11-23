@@ -113,12 +113,13 @@ class VelocityHMR {
           } else {
             // Fall back to full reload if hot replacement fails
             console.log('[HMR] 🔄 Reloading page to apply changes...');
-            setTimeout(() => window.location.reload(), 100);
+            window.location.reload();
           }
         })
         .catch((error) => {
           console.error(`[HMR] ❌ Failed to update ${module}:`, error);
-          this.showError(error.message);
+          console.log('[HMR] 🔄 Falling back to full reload...');
+          setTimeout(() => window.location.reload(), 1000);
         });
     } catch (error) {
       console.error('[HMR] ❌ Update error:', error);

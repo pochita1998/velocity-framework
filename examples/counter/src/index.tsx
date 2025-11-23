@@ -1,4 +1,4 @@
-import { createSignal, createMemo, render } from 'velocity-runtime';
+import { createSignal, createMemo, render, createElement } from 'velocity-runtime';
 
 function Counter() {
   const [count, setCount] = createSignal(0);
@@ -24,7 +24,7 @@ function Counter() {
 
   return (
     <div>
-      <h1>⚡ Velocity Counter</h1>
+      <h1>🚀 Velocity Counter - HMR Test</h1>
 
       <div class="counter">{count}</div>
 
@@ -55,4 +55,4 @@ function Counter() {
   );
 }
 
-render(() => <Counter />, document.getElementById('root')!);
+render(() => <Counter />, document.getElementById('root') as HTMLElement);

@@ -94,12 +94,57 @@ impl JsxTransformer {
             }))),
         });
 
-        // Props object (simplified - just creates empty object for now)
+        // Props object - extract JSX attributes
+        let mut prop_entries = Vec::new();
+
+        for attr in attrs {
+            if let JSXAttrOrSpread::JSXAttr(jsx_attr) = attr {
+                // Get attribute name
+                let key_name = match &jsx_attr.name {
+                    JSXAttrName::Ident(ident) => ident.sym.to_string(),
+                    _ => continue,
+                };
+
+                // Get attribute value
+                let value_expr = match &jsx_attr.value {
+                    Some(JSXAttrValue::Lit(lit)) => {
+                        // String literal like class="counter"
+                        Box::new(Expr::Lit(lit.clone()))
+                    }
+                    Some(JSXAttrValue::JSXExprContainer(container)) => {
+                        // Expression like onClick={handler}
+                        match &container.expr {
+                            JSXExpr::Expr(expr) => expr.clone(),
+                            _ => continue,
+                        }
+                    }
+                    None => {
+                        // Boolean attribute like disabled
+                        Box::new(Expr::Lit(Lit::Bool(Bool {
+                            span: Default::default(),
+                            value: true,
+                        })))
+                    }
+                    _ => continue,
+                };
+
+                // Create property
+                prop_entries.push(PropOrSpread::Prop(Box::new(Prop::KeyValue(KeyValueProp {
+                    key: PropName::Str(Str {
+                        span: Default::default(),
+                        value: key_name.into(),
+                        raw: None,
+                    }),
+                    value: value_expr,
+                }))));
+            }
+        }
+
         args.push(ExprOrSpread {
             spread: None,
             expr: Box::new(Expr::Object(ObjectLit {
                 span: Default::default(),
-                props: vec![],
+                props: prop_entries,
             })),
         });
 
