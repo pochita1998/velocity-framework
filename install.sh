@@ -37,17 +37,38 @@ echo "✅ Installation Complete!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Check if ~/.cargo/bin is in PATH
+# Check if ~/.cargo/bin is in PATH and add it automatically
 if [[ ":$PATH:" != *":$HOME/.cargo/bin:"* ]]; then
-    echo "⚠️  ~/.cargo/bin is not in your PATH"
+    echo "📝 Adding ~/.cargo/bin to PATH..."
+
+    # Detect shell
+    if [ -n "$BASH_VERSION" ]; then
+        SHELL_RC="$HOME/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        SHELL_RC="$HOME/.zshrc"
+    else
+        SHELL_RC="$HOME/.profile"
+    fi
+
+    # Add to shell config if not already there
+    if ! grep -q 'export PATH="$HOME/.cargo/bin:$PATH"' "$SHELL_RC" 2>/dev/null; then
+        echo "" >> "$SHELL_RC"
+        echo '# Added by Velocity Framework installer' >> "$SHELL_RC"
+        echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$SHELL_RC"
+        echo "✓ Added to $SHELL_RC"
+    else
+        echo "✓ Already in $SHELL_RC"
+    fi
+
+    # Add to current session
+    export PATH="$HOME/.cargo/bin:$PATH"
+    echo "✓ Added to current session"
     echo ""
-    echo "Add this to your ~/.bashrc or ~/.zshrc:"
-    echo "  export PATH=\"\$HOME/.cargo/bin:\$PATH\""
-    echo ""
-    echo "Then run: source ~/.bashrc (or ~/.zshrc)"
+    echo "Note: Open a new terminal or run:"
+    echo "  source $SHELL_RC"
     echo ""
 else
-    echo "✓ ~/.cargo/bin is in PATH"
+    echo "✓ ~/.cargo/bin is already in PATH"
     echo ""
 fi
 

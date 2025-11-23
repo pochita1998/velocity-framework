@@ -25,7 +25,10 @@ cd velocity-framework
 ./install.sh
 ```
 
-The installer will build and install the CLI globally. Make sure `~/.cargo/bin` is in your PATH.
+The installer will:
+- ✅ Build and install the CLI globally
+- ✅ Automatically add `~/.cargo/bin` to your PATH
+- ✅ Set up everything you need to start developing
 
 **Manual install:**
 
