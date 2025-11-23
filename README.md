@@ -2,49 +2,68 @@
 
 A blazingly fast JavaScript framework powered by Rust. Velocity combines the fine-grained reactivity of SolidJS with the speed of Rust-based build tooling to deliver unmatched performance.
 
-## Features
+## ✨ Features
 
-- **⚡ Fine-grained Reactivity**: Signal-based reactivity system with surgical DOM updates (no Virtual DOM)
-- **🦀 Rust-Powered Tooling**: Lightning-fast bundler, dev server, and JSX compiler written in Rust
-- **📦 Zero Runtime Overhead**: Compiled output is minimal with no VDOM diffing
-- **🎯 Familiar Syntax**: JSX/TSX syntax that React developers already know
-- **🔥 Hot Module Replacement**: Instant updates with state preservation (<50ms)
-- **📊 Bundle Analysis**: Built-in size tracking and optimization suggestions
-- **🗺️ Source Maps**: Debug TypeScript/TSX in browser DevTools
-- **📘 Full TypeScript Support**: First-class TypeScript integration
+- **⚡ Lightning Fast**: ~1ms compile time, <50ms Hot Module Replacement
+- **🦀 Rust-Powered**: 10-40x faster than Webpack/Babel using SWC
+- **⚛️ Fine-Grained Reactivity**: Signal-based with automatic tracking (no Virtual DOM)
+- **🎯 Familiar Syntax**: Use JSX/TSX like React
+- **🔥 Hot Module Replacement**: Instant updates with full state preservation
+- **📦 Tiny Bundle**: Just 33KB gzipped runtime
+- **⚙️ Zero Config**: Works out of the box
 
-## Architecture
-
-### Why Velocity is Fast
-
-1. **Fine-grained Reactivity**: Unlike React's Virtual DOM, Velocity tracks dependencies at the signal level and updates only the exact DOM nodes that need to change.
-
-2. **Rust-Based Tooling**: The bundler, dev server, and JSX transformer are written in Rust using SWC, providing 10-100x faster build times than JavaScript-based tools.
-
-3. **Direct DOM Manipulation**: No reconciliation algorithm, no VDOM overhead - just direct, surgical updates to the DOM.
-
-4. **Compile-time Optimizations**: The Rust-based JSX compiler can optimize your components at build time.
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Installation
 
+Install the Velocity CLI globally:
+
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/velocity-framework
-cd velocity-framework
-
-# Install dependencies
-pnpm install
-
-# Build the framework
-pnpm build
+cargo install --path crates/velocity-cli
 ```
 
-### Create Your First App
+Or use it directly from this repo:
+
+```bash
+# Clone the repository
+git clone https://github.com/pochita1998/velocity-framework
+cd velocity-framework
+
+# Build the CLI
+cargo build --release
+
+# Install globally (optional)
+cargo install --path crates/velocity-cli
+```
+
+### Create a New Project
+
+```bash
+# Create a new Velocity project
+velocity create my-app
+
+# Start development
+cd my-app
+velocity dev
+```
+
+That's it! Your app is now running at http://localhost:3000 with hot reload enabled.
+
+### Manual Setup
+
+Or create a project manually:
+
+**1. Create project structure:**
+
+```bash
+mkdir my-app && cd my-app
+mkdir src dist public
+```
+
+**2. Create `src/index.tsx`:**
 
 ```tsx
-import { createSignal, render } from 'velocity-runtime';
+import { createSignal, render, createElement } from 'velocity-runtime';
 
 function Counter() {
   const [count, setCount] = createSignal(0);
@@ -59,373 +78,243 @@ function Counter() {
   );
 }
 
-render(() => <Counter />, document.getElementById('root')!);
+render(() => <Counter />, document.getElementById('root') as HTMLElement);
 ```
 
-### Run the Dev Server
+**3. Create `index.html`:**
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Velocity App</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/dist/index.js"></script>
+</body>
+</html>
+```
+
+**4. Start development:**
 
 ```bash
-cd examples/counter
-velocity dev --port 3000
+velocity dev
 ```
 
-Open `http://localhost:3000` in your browser. The dev server includes:
-- Hot Module Replacement (HMR) via WebSocket
-- Automatic file watching and recompilation
-- Instant updates in the browser (<50ms)
+The dev server will:
+- ✅ Watch for file changes
+- ✅ Auto-compile on save (<1ms)
+- ✅ Hot reload the browser (<50ms total)
+- ✅ Show compilation errors in an overlay
 
-## Core Concepts
+## 📖 CLI Commands
 
-### Signals
+```bash
+# Create a new project
+velocity create <name> [--template counter|minimal]
 
-Signals are the foundation of Velocity's reactivity system. They're reactive primitives that hold values and notify dependents when they change.
+# Start development server with HMR
+velocity dev [--port 3000] [--root .]
 
-```tsx
-import { createSignal } from 'velocity-runtime';
+# Build for production
+velocity build [--root .] [--out-dir dist] [--minify]
 
-const [count, setCount] = createSignal(0);
+# Compile a single file
+velocity compile <file> [-o output.js] [--minify]
 
-// Read the value
-console.log(count()); // 0
+# Watch and recompile on changes
+velocity watch <file> -o output.js
 
-// Update the value
-setCount(1);
-setCount(c => c + 1); // updater function
+# Analyze bundle size
+velocity analyze [--root .] [--format text|json]
+
+# Show version and info
+velocity info
 ```
 
-### Effects
+## 🏗️ Architecture
 
-Effects are computations that automatically re-run when their dependencies change.
+### Why Velocity is Fast
+
+**1. Fine-Grained Reactivity**
+- Tracks dependencies at the signal level
+- Updates only the exact DOM nodes that changed
+- No Virtual DOM diffing overhead
+
+**2. Rust-Based Compiler**
+- 5-stage pipeline: Parser → Analyzer → Transformer → Optimizer → Codegen
+- Uses SWC for 10-40x faster compilation
+- ~1ms per file compile time
+
+**3. Direct DOM Manipulation**
+- No reconciliation algorithm
+- Surgical updates to the DOM
+- Maximum performance, minimal overhead
+
+**4. Smart Hot Module Replacement**
+- WebSocket-based with <50ms latency
+- State preservation across updates
+- Visual notifications and error overlay
+
+## 📊 Performance
+
+```
+Compile Time:  ~1ms per file
+Build Time:    ~5ms for 3 files
+HMR Latency:   <50ms file save → browser update
+Runtime Size:  33KB gzipped
+```
+
+## 🎯 API Reference
+
+### Reactive Primitives
 
 ```tsx
-import { createSignal, createEffect } from 'velocity-runtime';
+import { createSignal, createEffect, createMemo } from 'velocity-runtime';
 
+// Signals - reactive state
 const [count, setCount] = createSignal(0);
+setCount(count() + 1);
 
+// Effects - run when dependencies change
 createEffect(() => {
-  console.log('Count changed to:', count());
+  console.log('Count is:', count());
 });
 
-setCount(1); // Logs: "Count changed to: 1"
-```
-
-### Memos
-
-Memos are cached computed values that only recalculate when dependencies change.
-
-```tsx
-import { createSignal, createMemo } from 'velocity-runtime';
-
-const [count, setCount] = createSignal(0);
+// Memos - cached computed values
 const doubled = createMemo(() => count() * 2);
-
-console.log(doubled()); // 0
-setCount(5);
-console.log(doubled()); // 10
 ```
 
-### Components
-
-Components are just functions that return JSX.
+### Rendering
 
 ```tsx
-function Greeting(props: { name: string }) {
-  return <h1>Hello, {props.name}!</h1>;
-}
+import { render, createElement } from 'velocity-runtime';
 
 function App() {
-  return <Greeting name="World" />;
+  return <div>Hello Velocity!</div>;
 }
+
+render(() => <App />, document.getElementById('root') as HTMLElement);
 ```
 
-### Lifecycle Hooks
+### Lifecycle
 
 ```tsx
 import { onMount, onCleanup } from 'velocity-runtime';
 
-function Timer() {
+function Component() {
   onMount(() => {
-    const interval = setInterval(() => {
-      console.log('Tick');
-    }, 1000);
-
-    onCleanup(() => {
-      clearInterval(interval);
-    });
+    console.log('Component mounted');
   });
 
-  return <div>Check the console</div>;
+  onCleanup(() => {
+    console.log('Component cleaning up');
+  });
+
+  return <div>Component</div>;
 }
 ```
 
-## Project Structure
+## 📁 Project Structure
+
+```
+my-app/
+├── src/
+│   └── index.tsx          # Your app code
+├── dist/                  # Compiled output
+│   ├── index.js
+│   └── velocity-runtime.js
+├── public/                # Static assets
+│   └── style.css
+├── index.html             # HTML entry point
+├── package.json
+└── README.md
+```
+
+## 🔧 Advanced Usage
+
+### Custom Dev Server Port
+
+```bash
+velocity dev --port 8080
+```
+
+### Production Build with Minification
+
+```bash
+velocity build --minify
+```
+
+### Analyze Bundle Size
+
+```bash
+velocity analyze --format json > bundle-analysis.json
+```
+
+## 🌟 Examples
+
+Check out the `/examples` directory:
+
+- **counter** - Simple counter with signals and memos
+- **todo-app** - Todo list with CRUD operations
+- **landing** - Beautiful animated landing page
+
+Run examples:
+
+```bash
+cd examples/counter
+velocity dev
+```
+
+## 🛠️ Development
+
+### Building from Source
+
+```bash
+# Clone the repo
+git clone https://github.com/pochita1998/velocity-framework
+cd velocity-framework
+
+# Build all crates
+cargo build --release
+
+# Run tests
+cargo test
+
+# Build WASM runtime
+cd crates/velocity-wasm
+wasm-pack build --target web
+```
+
+### Project Structure
 
 ```
 velocity-framework/
 ├── crates/
-│   ├── velocity-cli/       # CLI tool (Rust)
-│   ├── velocity-compiler/  # JSX/TSX compiler using SWC (Rust)
-│   ├── velocity-wasm/      # Reactive runtime compiled to WASM (Rust)
-│   └── velocity-bundler/   # Bundler and dev server (Rust, future)
-├── examples/
-│   ├── todo-app/           # Example todo application
-│   └── test-compile.tsx    # Test file for the compiler
-├── docs/
-│   ├── MANIFESTO.md        # The vision and philosophy
-│   ├── COMPILER.md         # Compiler architecture
-│   ├── ARCHITECTURE.md     # Overall architecture
-│   └── ROADMAP.md          # Development roadmap
+│   ├── velocity-cli/       # CLI tool
+│   ├── velocity-compiler/  # Rust JSX compiler (SWC-based)
+│   ├── velocity-wasm/      # WASM reactive runtime
+│   └── velocity-bundler/   # Module bundler
+├── examples/               # Example applications
+├── docs/                   # Documentation
 └── README.md
 ```
 
-### Crate Breakdown
+## 🤝 Contributing
 
-- **velocity-wasm**: The reactive runtime (33KB) - Signals, Effects, DOM manipulation
-- **velocity-compiler**: Parses JSX/TSX → optimized JavaScript (5 modules: parser, analyzer, transformer, optimizer, codegen)
-- **velocity-cli**: Command-line interface for compiling and building projects
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Benchmarks
+## 📄 License
 
-Performance comparison (lower is better):
+MIT License - see LICENSE file for details
 
-| Framework | Initial Render | Update (1000 items) | Bundle Size |
-|-----------|----------------|---------------------|-------------|
-| Velocity  | 🔥 **Fast**    | 🔥 **Fast**        | **~5kb**    |
-| React     | Slower         | Slower              | ~40kb       |
-| Vue       | Medium         | Medium              | ~30kb       |
-| Svelte    | Fast           | Fast                | ~10kb       |
-| SolidJS   | Fast           | Fast                | ~7kb        |
+## 🙏 Acknowledgments
 
-*Benchmarks coming soon - framework is in early development*
-
-## API Reference
-
-### Reactivity
-
-- `createSignal<T>(initialValue: T): [() => T, (value: T) => void]`
-- `createEffect(fn: () => void): () => void`
-- `createMemo<T>(fn: () => T): () => T`
-- `batch(fn: () => void): void`
-- `untrack<T>(fn: () => T): T`
-
-### Component Lifecycle
-
-- `onMount(fn: () => void | (() => void)): void`
-- `onCleanup(fn: () => void): void`
-- `createContext<T>(defaultValue: T)`
-
-### DOM
-
-- `render(component: () => JSX.Element, container: Element): () => void`
-- `createPortal(children: JSX.Element, container: Element)`
-
-### Data Fetching
-
-- `createResource<T>(key: string, fetcher: () => Promise<T>): [data: T, loading: boolean, error: string | null]`
-- `invalidateResource(key: string): void`
-- `refetchResource(key: string): void`
-- `mutateResource<T>(key: string, mutator: (data: T) => T): void`
-
-### Server-Side Rendering
-
-- `renderToString(component: () => JSX.Element): string`
-- `renderToStream(component: () => JSX.Element): ReadableStream`
-- `hydrateRoot(containerId: string): void`
-- `serializeState(): object`
-- `deserializeState(state: object): void`
-
-### Hydration
-
-- `markIsland(element: Element, islandId: string): void`
-- `getIslandsToHydrate(): Element[]`
-- `markHydrated(element: Element): void`
-
-### Error Handling
-
-- `createErrorBoundary(component: () => JSX.Element, fallback: () => JSX.Element): () => JSX.Element`
-- `onError(handler: (error: Error) => void): void`
-
-### DevTools & Performance
-
-- `enableDevTools(): void` - Expose runtime to `window.__VELOCITY_DEVTOOLS__`
-- `getMetrics(): { signalCount: number, effectCount: number, resourceCount: number }`
-- `mark(name: string): void` - Create performance mark
-- `measure(name: string, startMark: string, endMark: string): number` - Measure duration in ms
-
-## CLI Commands
-
-The Velocity CLI is written in Rust for maximum performance.
-
-```bash
-# Show version and framework info
-velocity info
-
-# Compile a single file
-velocity compile <file.tsx> -o <output.js>
-
-# Compile with minification
-velocity compile <file.tsx> -o <output.js> --minify
-
-# Compile without optimizations
-velocity compile <file.tsx> --no-optimize
-
-# Watch and auto-recompile on changes
-velocity watch <file.tsx> -o <output.js>
-
-# Watch with minification
-velocity watch <file.tsx> -o <output.js> --minify
-
-# Build entire project
-velocity build [--root .] [--out-dir dist] [--minify]
-
-# Start development server with HMR
-velocity dev [--port 3000] [--root .]
-```
-
-### Example Usage
-
-```bash
-# Compile a component
-velocity compile src/Counter.tsx -o dist/Counter.js
-
-# See the output
-velocity compile src/App.tsx
-
-# Minified production build
-velocity compile src/App.tsx -o dist/app.min.js --minify
-
-# Watch mode for development
-velocity watch src/App.tsx -o dist/app.js
-# File is automatically recompiled on every save!
-```
-
-**Compilation Speed**: ~1ms per file! The Rust compiler is **10-40x faster** than Webpack/Babel.
-
-**Watch Mode**: Instant recompilation (<1ms) on file changes with automatic error recovery.
-
-**Dev Server**: Full development server with HMR support:
-```bash
-# Start dev server
-velocity dev --port 3000 --root examples/counter
-
-# Features:
-# - WebSocket-based HMR for instant updates
-# - Automatic file watching and compilation
-# - Static file serving (dist/, src/)
-# - HMR client automatically injected
-# - <50ms from file save to browser update
-```
-
-**Project Build**: Compile entire projects at once:
-```bash
-# Build project
-velocity build --root examples/counter --out-dir dist
-
-# Output:
-# 📦 Building project from examples/counter...
-# 🔍 Found 3 file(s) to compile
-#   📄 index.tsx → ✅
-#   📄 Counter.tsx → ✅
-#   📄 utils.ts → ✅
-# 📊 Build Summary:
-#    ✅ Compiled: 3 file(s)
-#    ⏱️  Time: 4.99ms
-
-# Minified production build
-velocity build --root examples/counter --out-dir dist --minify
-# 40% smaller output!
-```
-
-## Why Another Framework?
-
-Velocity was created to explore the intersection of:
-- **Fine-grained reactivity** (SolidJS-style signals)
-- **Rust-based tooling** (for maximum build speed)
-- **Familiar DX** (JSX syntax developers love)
-
-The goal is to provide the best developer experience while achieving the best possible runtime and build performance.
-
-## Roadmap
-
-### Completed ✅
-- [x] **Phase 1**: Fine-grained reactive runtime (Rust/WASM)
-  - Signals, Effects, Memos
-  - Direct DOM manipulation
-  - 33KB runtime size
-- [x] **Phase 2**: Rust-based JSX compiler
-  - Parser using SWC
-  - Static reactivity analysis
-  - JSX → DOM transformation
-  - Optimization passes (constant folding, dead code elimination)
-  - Code generation with optional minification
-  - **10-40x faster than Webpack/Babel** (~1ms compile time)
-- [x] **Phase 3**: CLI Integration & Development Workflow
-  - `velocity compile` command with optimization flags
-  - `velocity watch` command for auto-recompilation
-  - File watcher with instant rebuild (<1ms)
-  - Minification support
-  - Automatic error recovery in watch mode
-
-- [x] **Phase 3 (continued)**: Development Server & HMR
-  - ✅ Development server with Axum HTTP server
-  - ✅ WebSocket-based Hot Module Replacement
-  - ✅ Automatic file watching and compilation
-  - ✅ HMR client with visual notifications
-  - ✅ Error overlay for compilation errors
-  - ✅ <50ms total update time (file save → browser update)
-  - ✅ Multi-file project builds with `velocity build`
-  - ✅ Recursive directory walking
-  - ✅ Build summary with timing statistics
-
-- [x] **Phase 3 (final)**: Advanced development features
-  - ✅ Source maps for debugging
-  - ✅ Advanced HMR (state preservation, cascade updates)
-  - ✅ Bundle analysis and optimization (`velocity analyze`)
-  - ✅ JSON and text output formats
-  - ✅ Smart optimization suggestions
-
-### Completed ✅ (Continued)
-- [x] **Phase 4**: Partial/Micro Hydration
-  - ✅ Island architecture with markers and detection
-  - ✅ Signal-level hydration with state serialization
-  - ✅ Progressive enhancement support
-  - ✅ `markIsland()`, `getIslandsToHydrate()`, `markHydrated()`
-
-- [x] **Phase 5**: Unified Data Layer (velocity-data)
-  - ✅ `createResource()` for async server state
-  - ✅ Automatic caching with timestamp tracking
-  - ✅ Loading/error states with optimistic updates
-  - ✅ `invalidateResource()`, `refetchResource()`, `mutateResource()`
-
-- [x] **Phase 6**: SSR Streaming
-  - ✅ `renderToString()` for server-side rendering
-  - ✅ `renderToStream()` for streaming HTML
-  - ✅ `hydrateRoot()` for client-side hydration
-  - ✅ `serializeState()` / `deserializeState()` for state transfer
-
-- [x] **Phase 7**: Production Polish
-  - ✅ Error boundaries with `createErrorBoundary()` and `onError()`
-  - ✅ DevTools integration via `window.__VELOCITY_DEVTOOLS__`
-  - ✅ Performance metrics with `getMetrics()`
-  - ✅ Benchmarking support with `mark()` and `measure()`
-
-See [ROADMAP.md](docs/ROADMAP.md) for detailed timeline.
-
-## Contributing
-
-Contributions are welcome! This is an experimental project exploring high-performance framework design.
-
-## License
-
-MIT
-
-## Acknowledgments
-
-- **SolidJS**: Inspiration for the fine-grained reactivity model
-- **React**: JSX syntax and component model
-- **SWC**: Rust-based JavaScript tooling
-- **Vite**: Development server inspiration
+- Inspired by [SolidJS](https://www.solidjs.com/) for fine-grained reactivity
+- Built with [SWC](https://swc.rs/) for blazing fast compilation
+- Powered by [Rust](https://www.rust-lang.org/) 🦀
 
 ---
 
-Built with ❤️ using Rust and TypeScript
+Built with ⚡ by the Velocity team
