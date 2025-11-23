@@ -72,59 +72,18 @@ class VelocityHMR {
   }
 
   applyUpdate(message) {
-    const { module, code, timestamp, dependents } = message;
-    console.log(`[HMR] 📦 Updating module: ${module} (${timestamp})`);
+    const { module, code, timestamp } = message;
+    console.log(`[HMR] 📦 Updating module: ${module}`);
 
-    // Log cascade info if there are dependents
-    if (dependents && dependents.length > 0) {
-      console.log(`[HMR] 🔗 Cascade update will affect ${dependents.length} dependent module(s)`);
-    }
+    // For now, do a full reload for all updates
+    // This ensures reliability while we work on proper HMR
+    console.log('[HMR] 🔄 Reloading page to apply changes...');
+    this.showNotification(`Updated: ${module}`, 'success');
 
-    try {
-      // Capture current state before update
-      const savedState = this.captureState();
-
-      // Create a blob URL for the new module
-      const blob = new Blob([code], { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
-
-      // Dynamically import the updated module
-      import(url)
-        .then((newModule) => {
-          console.log(`[HMR] ✅ Module ${module} updated successfully`);
-
-          // Store the module
-          const oldModule = this.modules.get(module);
-          this.modules.set(module, newModule);
-
-          // Clean up the blob URL
-          URL.revokeObjectURL(url);
-
-          // Try hot replacement with state preservation
-          if (this.tryHotReplace(module, oldModule, newModule, savedState)) {
-            console.log('[HMR] 🔥 Hot replaced without reload');
-
-            // Apply cascade updates to dependent modules
-            if (dependents && dependents.length > 0) {
-              this.applyCascadeUpdates(dependents, savedState);
-            }
-
-            this.showNotification(`Updated: ${module}`, 'success');
-          } else {
-            // Fall back to full reload if hot replacement fails
-            console.log('[HMR] 🔄 Reloading page to apply changes...');
-            window.location.reload();
-          }
-        })
-        .catch((error) => {
-          console.error(`[HMR] ❌ Failed to update ${module}:`, error);
-          console.log('[HMR] 🔄 Falling back to full reload...');
-          setTimeout(() => window.location.reload(), 1000);
-        });
-    } catch (error) {
-      console.error('[HMR] ❌ Update error:', error);
-      this.showError(error.message);
-    }
+    // Small delay to show the notification
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   }
 
   applyCascadeUpdates(dependents, savedState) {
