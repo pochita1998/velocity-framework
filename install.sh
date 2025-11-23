@@ -22,6 +22,19 @@ fi
 
 echo "✓ Cargo found"
 
+# Check if wasm-pack is installed
+if ! command -v wasm-pack &> /dev/null; then
+    echo "📦 Installing wasm-pack..."
+    cargo install wasm-pack
+fi
+
+# Build WASM runtime first
+echo ""
+echo "🦀 Building WASM runtime..."
+cd crates/velocity-wasm
+wasm-pack build --target web
+cd ../..
+
 # Build and install
 echo ""
 echo "📦 Building Velocity CLI..."
