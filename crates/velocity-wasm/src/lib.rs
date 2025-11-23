@@ -218,6 +218,12 @@ pub fn create_signal(initial_value: JsValue) -> Vec<JsValue> {
     result
 }
 
+/// React-compatible useState hook (alias for createSignal)
+#[wasm_bindgen(js_name = useState)]
+pub fn use_state(initial_value: JsValue) -> Vec<JsValue> {
+    create_signal(initial_value)
+}
+
 #[wasm_bindgen(js_name = createEffect)]
 pub fn create_effect(func: &js_sys::Function) {
     let func_clone = func.clone();
@@ -238,16 +244,126 @@ pub fn create_effect(func: &js_sys::Function) {
     Runtime::run_effect(effect_id);
 }
 
+/// React-compatible useEffect hook (alias for createEffect)
+#[wasm_bindgen(js_name = useEffect)]
+pub fn use_effect(func: &js_sys::Function) {
+    create_effect(func)
+}
+
+/// Create a memoized computed value (compatible with useMemo)
+#[wasm_bindgen(js_name = createMemo)]
+pub fn create_memo(func: &js_sys::Function) -> js_sys::Function {
+    // Create a signal to hold the computed value
+    let result_signal = Signal::new(JsValue::UNDEFINED);
+    let result_ref = Rc::new(RefCell::new(result_signal));
+
+    // Create an effect that computes and stores the value
+    let func_clone = func.clone();
+    let result_clone = result_ref.clone();
+
+    let effect_fn = Rc::new(move || {
+        match func_clone.call0(&JsValue::NULL) {
+            Ok(value) => {
+                result_clone.borrow().set(value);
+            },
+            Err(e) => {
+                console::error_2(&"Memo error:".into(), &e);
+            }
+        }
+    });
+
+    let effect_id = RUNTIME.with(|runtime| {
+        runtime.borrow_mut().create_effect(effect_fn)
+    });
+
+    // Run the effect immediately to compute initial value
+    Runtime::run_effect(effect_id);
+
+    // Return a getter function
+    let getter = Closure::wrap(Box::new(move || {
+        result_ref.borrow().get()
+    }) as Box<dyn Fn() -> JsValue>);
+
+    let func = getter.as_ref().clone();
+    getter.forget();
+    func.into()
+}
+
+/// React-compatible useMemo hook (alias for createMemo)
+#[wasm_bindgen(js_name = useMemo)]
+pub fn use_memo(func: &js_sys::Function) -> js_sys::Function {
+    create_memo(func)
+}
+
 // ============================================================================
 // DOM Utilities
 // ============================================================================
 
 #[wasm_bindgen(js_name = createElement)]
-pub fn create_element(tag: &str) -> Result<HtmlElement, JsValue> {
+pub fn create_element(tag: &str, props: JsValue, children: js_sys::Array) -> Result<HtmlElement, JsValue> {
     let window = web_sys::window().ok_or("No window")?;
     let document = window.document().ok_or("No document")?;
     let element = document.create_element(tag)?;
-    Ok(element.dyn_into::<HtmlElement>()?)
+    let html_element = element.dyn_into::<HtmlElement>()?;
+
+    // Apply props if provided
+    if !props.is_null() && !props.is_undefined() {
+        let props_obj = js_sys::Object::from(props);
+        let keys = js_sys::Object::keys(&props_obj);
+
+        for i in 0..keys.length() {
+            if let Some(key) = keys.get(i).as_string() {
+                if let Ok(value) = js_sys::Reflect::get(&props_obj, &JsValue::from_str(&key)) {
+                    // Handle special cases
+                    if key == "className" {
+                        if let Some(class_name) = value.as_string() {
+                            html_element.set_class_name(&class_name);
+                        }
+                    } else if key == "style" {
+                        if let Some(style_str) = value.as_string() {
+                            html_element.set_attribute("style", &style_str)?;
+                        }
+                    } else if key.starts_with("on") {
+                        // Event listeners handled separately
+                        if let Ok(func) = value.dyn_into::<js_sys::Function>() {
+                            let event_name = &key[2..].to_lowercase();
+                            let listener = Closure::wrap(Box::new(move |e: web_sys::Event| {
+                                let _ = func.call1(&JsValue::NULL, &e);
+                            }) as Box<dyn FnMut(web_sys::Event)>);
+
+                            let _ = html_element.add_event_listener_with_callback(
+                                event_name,
+                                listener.as_ref().unchecked_ref()
+                            );
+                            listener.forget();
+                        }
+                    } else {
+                        // Regular attributes
+                        if let Some(attr_value) = value.as_string() {
+                            html_element.set_attribute(&key, &attr_value)?;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Append children
+    for i in 0..children.length() {
+        let child = children.get(i);
+
+        // Handle text nodes
+        if let Some(text) = child.as_string() {
+            let text_node = document.create_text_node(&text);
+            html_element.append_child(&text_node)?;
+        }
+        // Handle DOM elements
+        else if let Ok(child_element) = child.dyn_into::<Node>() {
+            html_element.append_child(&child_element)?;
+        }
+    }
+
+    Ok(html_element)
 }
 
 #[wasm_bindgen(js_name = createTextNode)]

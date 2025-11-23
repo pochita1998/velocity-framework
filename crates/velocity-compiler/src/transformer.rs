@@ -18,7 +18,7 @@
 use crate::analyzer::Analysis;
 use crate::error::Result;
 use swc_core::ecma::ast::*;
-use swc_core::ecma::visit::{VisitMut, VisitMutWith};
+use swc_core::ecma::visit::{VisitMut, VisitMutWith, noop_visit_mut_type};
 
 /// Transformer that converts JSX to DOM operations
 #[allow(dead_code)]
@@ -284,6 +284,54 @@ impl VisitMut for JsxTransformer {
 pub fn transform(mut module: Module, analysis: &Analysis) -> Result<Module> {
     let mut transformer = JsxTransformer::new(analysis.clone());
     module.visit_mut_with(&mut transformer);
+    Ok(module)
+}
+
+/// TypeScript stripper - removes all TypeScript syntax
+struct TypeScriptStripper;
+
+impl VisitMut for TypeScriptStripper {
+    // Remove type annotations from function parameters
+    noop_visit_mut_type!();
+
+    // Remove interface/type declarations from module items
+    fn visit_mut_module_items(&mut self, items: &mut Vec<ModuleItem>) {
+        items.retain(|item| {
+            !matches!(
+                item,
+                ModuleItem::Stmt(Stmt::Decl(Decl::TsInterface(_)))
+                    | ModuleItem::Stmt(Stmt::Decl(Decl::TsTypeAlias(_)))
+                    | ModuleItem::Stmt(Stmt::Decl(Decl::TsEnum(_)))
+                    | ModuleItem::Stmt(Stmt::Decl(Decl::TsModule(_)))
+            )
+        });
+        // Continue visiting remaining items
+        for item in items.iter_mut() {
+            item.visit_mut_children_with(self);
+        }
+    }
+
+    // Remove TypeScript-only expressions
+    fn visit_mut_expr(&mut self, expr: &mut Expr) {
+        // Remove TypeScript assertion operators (as, !)
+        if let Expr::TsAs(ts_as) = expr {
+            *expr = (*ts_as.expr).clone();
+        } else if let Expr::TsNonNull(ts_non_null) = expr {
+            *expr = (*ts_non_null.expr).clone();
+        } else if let Expr::TsTypeAssertion(ts_assert) = expr {
+            *expr = (*ts_assert.expr).clone();
+        } else if let Expr::TsConstAssertion(ts_const) = expr {
+            *expr = (*ts_const.expr).clone();
+        }
+
+        expr.visit_mut_children_with(self);
+    }
+}
+
+/// Strip TypeScript syntax from a module
+pub fn strip_typescript(mut module: Module) -> Result<Module> {
+    let mut stripper = TypeScriptStripper;
+    module.visit_mut_with(&mut stripper);
     Ok(module)
 }
 

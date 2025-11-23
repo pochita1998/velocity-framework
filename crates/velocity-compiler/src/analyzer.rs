@@ -33,10 +33,17 @@ pub struct Analysis {
 impl Default for Analysis {
     fn default() -> Self {
         let mut reactive_functions = HashSet::new();
+        // Velocity API
         reactive_functions.insert("createSignal".to_string());
         reactive_functions.insert("createMemo".to_string());
         reactive_functions.insert("createEffect".to_string());
         reactive_functions.insert("createResource".to_string());
+
+        // React API (drop-in replacement)
+        reactive_functions.insert("useState".to_string());
+        reactive_functions.insert("useMemo".to_string());
+        reactive_functions.insert("useEffect".to_string());
+        reactive_functions.insert("useCallback".to_string());
 
         Self {
             signals: HashSet::new(),
@@ -62,31 +69,34 @@ impl ReactivityAnalyzer {
         }
     }
 
-    /// Check if a call expression creates a signal
+    /// Check if a call expression creates a signal (Velocity or React API)
     fn is_create_signal(&self, callee: &Callee) -> bool {
         if let Callee::Expr(expr) = callee {
             if let Expr::Ident(ident) = &**expr {
-                return ident.sym.as_ref() == "createSignal";
+                let name = ident.sym.as_ref();
+                return name == "createSignal" || name == "useState";
             }
         }
         false
     }
 
-    /// Check if a call expression creates a memo
+    /// Check if a call expression creates a memo (Velocity or React API)
     fn is_create_memo(&self, callee: &Callee) -> bool {
         if let Callee::Expr(expr) = callee {
             if let Expr::Ident(ident) = &**expr {
-                return ident.sym.as_ref() == "createMemo";
+                let name = ident.sym.as_ref();
+                return name == "createMemo" || name == "useMemo" || name == "useCallback";
             }
         }
         false
     }
 
-    /// Check if a call expression creates an effect
+    /// Check if a call expression creates an effect (Velocity or React API)
     fn is_create_effect(&self, callee: &Callee) -> bool {
         if let Callee::Expr(expr) = callee {
             if let Expr::Ident(ident) = &**expr {
-                return ident.sym.as_ref() == "createEffect";
+                let name = ident.sym.as_ref();
+                return name == "createEffect" || name == "useEffect";
             }
         }
         false

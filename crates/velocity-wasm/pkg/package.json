@@ -1,0 +1,49 @@
+{
+  "name": "velocity",
+  "version": "0.1.0",
+  "description": "Blazingly fast JavaScript framework powered by Rust/WASM - Drop-in React replacement",
+  "type": "module",
+  "main": "index.js",
+  "types": "velocity_wasm.d.ts",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./velocity_wasm.d.ts"
+    },
+    "./react": {
+      "import": "./react.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "react.js",
+    "velocity_wasm.js",
+    "velocity_wasm_bg.wasm",
+    "velocity_wasm.d.ts"
+  ],
+  "keywords": [
+    "react",
+    "framework",
+    "rust",
+    "wasm",
+    "reactive",
+    "signals",
+    "jsx",
+    "performance",
+    "fast",
+    "compiler"
+  ],
+  "author": "Velocity Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pochita1998/velocity-framework"
+  },
+  "bugs": {
+    "url": "https://github.com/pochita1998/velocity-framework/issues"
+  },
+  "homepage": "https://github.com/pochita1998/velocity-framework#readme",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

@@ -64,22 +64,25 @@ impl Compiler {
     /// Compile a single file from source code
     pub fn compile(&self, source: &str, filename: &str) -> Result<String> {
         // 1. Parse JSX/TSX → AST
-        let module = parser::parse(source, filename)?;
+        let mut module = parser::parse(source, filename)?;
 
-        // 2. Analyze reactivity
+        // 2. Strip TypeScript types (must be done before analysis)
+        module = transformer::strip_typescript(module)?;
+
+        // 3. Analyze reactivity
         let analysis = analyzer::analyze(&module)?;
 
-        // 3. Transform JSX → DOM operations
+        // 4. Transform JSX → DOM operations
         let transformed = transformer::transform(module, &analysis)?;
 
-        // 4. Optimize (if enabled)
+        // 5. Optimize (if enabled)
         let optimized = if self.options.optimize {
             optimizer::optimize(transformed, &analysis)?
         } else {
             transformed
         };
 
-        // 5. Generate JavaScript code
+        // 6. Generate JavaScript code
         let code = codegen::generate(&optimized, &self.options)?;
 
         Ok(code)
@@ -88,22 +91,25 @@ impl Compiler {
     /// Compile with source map generation
     pub fn compile_with_source_map(&self, source: &str, filename: &str) -> Result<GenerateResult> {
         // 1. Parse JSX/TSX → AST
-        let module = parser::parse(source, filename)?;
+        let mut module = parser::parse(source, filename)?;
 
-        // 2. Analyze reactivity
+        // 2. Strip TypeScript types
+        module = transformer::strip_typescript(module)?;
+
+        // 3. Analyze reactivity
         let analysis = analyzer::analyze(&module)?;
 
-        // 3. Transform JSX → DOM operations
+        // 4. Transform JSX → DOM operations
         let transformed = transformer::transform(module, &analysis)?;
 
-        // 4. Optimize (if enabled)
+        // 5. Optimize (if enabled)
         let optimized = if self.options.optimize {
             optimizer::optimize(transformed, &analysis)?
         } else {
             transformed
         };
 
-        // 5. Generate JavaScript code with source map
+        // 6. Generate JavaScript code with source map
         codegen::generate_with_source_map(&optimized, &self.options, Some(filename))
     }
 
