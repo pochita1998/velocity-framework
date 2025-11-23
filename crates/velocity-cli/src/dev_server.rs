@@ -258,10 +258,18 @@ async fn start_file_watcher(state: Arc<DevServerState>, root: PathBuf) -> Result
                         for path in event.paths {
                             // Check if it's index.html
                             if path.file_name().and_then(|n| n.to_str()) == Some("index.html") {
-                                println!("🔄 index.html changed - triggering full reload");
+                                use std::time::Instant;
+                                let start = Instant::now();
+
                                 state.broadcast_update(HMRMessage::FullReload {
                                     reason: "index.html updated".to_string(),
                                 });
+
+                                let elapsed = start.elapsed();
+                                println!(
+                                    "🔄 index.html → full reload in {:.2}ms",
+                                    elapsed.as_secs_f64() * 1000.0
+                                );
                             } else if let Some(ext) = path.extension() {
                                 if ext == "tsx" || ext == "ts" || ext == "jsx" || ext == "js" {
                                     handle_file_change(&state, &path).await;
@@ -285,6 +293,9 @@ async fn start_file_watcher(state: Arc<DevServerState>, root: PathBuf) -> Result
 
 /// Handle file change - compile and broadcast update
 async fn handle_file_change(state: &DevServerState, path: &Path) {
+    use std::time::Instant;
+
+    let start = Instant::now();
     println!("🔄 File changed: {}", path.display());
 
     // Read file
@@ -297,9 +308,12 @@ async fn handle_file_change(state: &DevServerState, path: &Path) {
     };
 
     // Compile
+    let compile_start = Instant::now();
     let compiler = Compiler::new(state.compiler_options.clone());
     match compiler.compile(&source, path.to_str().unwrap()) {
         Ok(code) => {
+            let compile_time = compile_start.elapsed();
+
             // Get module path relative to root
             let module_path = path
                 .strip_prefix(&state.root)
@@ -307,12 +321,10 @@ async fn handle_file_change(state: &DevServerState, path: &Path) {
                 .to_string_lossy()
                 .to_string();
 
-            println!("✅ Compiled {}", module_path);
-
             // Broadcast update
             // TODO: Implement dependency tracking to populate dependents
             state.broadcast_update(HMRMessage::Update {
-                module: module_path,
+                module: module_path.clone(),
                 code,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -320,6 +332,15 @@ async fn handle_file_change(state: &DevServerState, path: &Path) {
                     .as_millis() as u64,
                 dependents: vec![], // Will be populated with module dependency tracking
             });
+
+            let total_time = start.elapsed();
+            println!(
+                "✅ {} → compiled in {:.2}ms, HMR in {:.2}ms (total: {:.2}ms)",
+                module_path,
+                compile_time.as_secs_f64() * 1000.0,
+                (total_time - compile_time).as_secs_f64() * 1000.0,
+                total_time.as_secs_f64() * 1000.0
+            );
         }
         Err(e) => {
             eprintln!("❌ Compilation error: {}", e);
