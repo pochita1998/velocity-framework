@@ -95,15 +95,36 @@ pub async fn start_dev_server(port: u16, root: String) -> Result<()> {
         .route("/__velocity/hmr-client.js", get(serve_hmr_client))
         .nest_service("/dist", ServeDir::new(root_path.join("dist")))
         .nest_service("/src", ServeDir::new(root_path.join("src")))
+        .nest_service("/public", ServeDir::new(root_path.join("public")))
+        .nest_service("/examples", ServeDir::new(root_path.join("examples")))
         .with_state(state);
 
-    // Start server
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    println!("🚀 Dev server starting on http://localhost:{}", port);
+    // Try to bind to the requested port, fallback if busy
+    let mut current_port = port;
+    let listener = loop {
+        let addr = SocketAddr::from(([127, 0, 0, 1], current_port));
+        match tokio::net::TcpListener::bind(addr).await {
+            Ok(listener) => break listener,
+            Err(_) if current_port < port + 10 => {
+                println!("⚠️  Port {} is in use, trying {}...", current_port, current_port + 1);
+                current_port += 1;
+            }
+            Err(e) => {
+                return Err(anyhow::anyhow!(
+                    "Failed to bind to port {} (tried ports {}-{}): {}",
+                    port,
+                    port,
+                    current_port,
+                    e
+                ));
+            }
+        }
+    };
+
+    println!("🚀 Dev server starting on http://localhost:{}", current_port);
     println!("📁 Serving from: {}", root);
     println!("🔥 HMR enabled - changes will update instantly!\n");
 
-    let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -221,6 +242,13 @@ async fn start_file_watcher(state: Arc<DevServerState>, root: PathBuf) -> Result
         println!("👀 Watching {}", src_dir.display());
     }
 
+    // Watch index.html in root
+    let index_html = root.join("index.html");
+    if index_html.exists() {
+        watcher.watch(&index_html, RecursiveMode::NonRecursive)?;
+        println!("👀 Watching index.html");
+    }
+
     // Watch for file changes
     loop {
         match rx.recv() {
@@ -228,7 +256,13 @@ async fn start_file_watcher(state: Arc<DevServerState>, root: PathBuf) -> Result
                 match event.kind {
                     EventKind::Modify(_) | EventKind::Create(_) => {
                         for path in event.paths {
-                            if let Some(ext) = path.extension() {
+                            // Check if it's index.html
+                            if path.file_name().and_then(|n| n.to_str()) == Some("index.html") {
+                                println!("🔄 index.html changed - triggering full reload");
+                                state.broadcast_update(HMRMessage::FullReload {
+                                    reason: "index.html updated".to_string(),
+                                });
+                            } else if let Some(ext) = path.extension() {
                                 if ext == "tsx" || ext == "ts" || ext == "jsx" || ext == "js" {
                                     handle_file_change(&state, &path).await;
                                 }
