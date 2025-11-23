@@ -8,6 +8,7 @@ use std::sync::mpsc::channel;
 use colored::*;
 
 mod dev_server;
+mod create;
 
 #[derive(Parser)]
 #[command(name = "velocity")]
@@ -95,6 +96,17 @@ enum Commands {
 
     /// Show version and build information
     Info,
+
+    /// Create a new Velocity project
+    Create {
+        /// Project name
+        #[arg(value_name = "NAME")]
+        name: String,
+
+        /// Template to use (counter, todo, minimal)
+        #[arg(short, long, default_value = "counter")]
+        template: String,
+    },
 }
 
 /// Build an entire project by walking the source directory
@@ -465,6 +477,10 @@ async fn main() -> anyhow::Result<()> {
         Commands::Analyze { root, out_dir, format } => {
             println!("📊 Analyzing bundle from {}...", root);
             analyze_bundle(&root, &out_dir, &format)?;
+        }
+
+        Commands::Create { name, template } => {
+            create::create_project(&name, &template)?;
         }
 
         Commands::Info => {

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Velocity - Lightning-Fast JavaScript Framework</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Animated lightning logo */
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem;
+      position: relative;
+    }
+
+    .logo-container {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 2rem;
+    }
+
+    .lightning {
+      font-size: 8rem;
+      line-height: 1;
+      display: inline-block;
+      animation: pulse 2s ease-in-out infinite;
+      filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+      }
+      50% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 50px rgba(255, 215, 0, 1));
+      }
+    }
+
+    .lightning-effect {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+      animation: glow 2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes glow {
+      0%, 100% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    h1 {
+      font-size: 4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      animation: shimmer 3s ease-in-out infinite;
+      background-size: 200% 100%;
+    }
+
+    @keyframes shimmer {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .tagline {
+      font-size: 1.5rem;
+      color: #a0aec0;
+      margin-bottom: 3rem;
+      font-weight: 300;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 4rem;
+      margin: 3rem 0;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin: 4rem 0;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      padding: 2rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 215, 0, 0.3);
+      box-shadow: 0 10px 40px rgba(255, 215, 0, 0.2);
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #ffd700;
+    }
+
+    .feature-desc {
+      color: #a0aec0;
+      line-height: 1.6;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+
+    .code-block .comment {
+      color: #6b7280;
+    }
+
+    .code-block .keyword {
+      color: #c792ea;
+    }
+
+    .code-block .function {
+      color: #82aaff;
+    }
+
+    .code-block .string {
+      color: #c3e88d;
+    }
+
+    .code-block .tag {
+      color: #f07178;
+    }
+
+    .cta-section {
+      text-align: center;
+      margin: 4rem 0;
+      padding: 3rem 2rem;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      padding: 1rem 2rem;
+      border-radius: 0.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      display: inline-block;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+      color: #0a0e27;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 215, 0, 0.5);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #718096;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 4rem;
+    }
+
+    /* Particle animation background */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .particle {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #ffd700;
+      border-radius: 50%;
+      animation: float linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100vh) translateX(100px);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="particles" id="particles"></div>
+
+  <div class="container">
+    <div class="hero">
+      <div class="logo-container">
+        <div class="lightning-effect"></div>
+        <div class="lightning">⚡</div>
+      </div>
+      <h1>Velocity</h1>
+      <p class="tagline">Lightning-fast JavaScript framework powered by Rust</p>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value">~1ms</div>
+          <div class="stat-label">Compile Time</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">&lt;50ms</div>
+          <div class="stat-label">Hot Reload</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">33KB</div>
+          <div class="stat-label">Runtime Size</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <h2 style="font-size: 2rem; margin-bottom: 1rem;">Get Started in Seconds</h2>
+      <div class="code-block">
+<span class="comment"># Install Velocity</span>
+cargo install velocity-cli
+
+<span class="comment"># Create a new project</span>
+velocity create my-app
+
+<span class="comment"># Start development server</span>
+cd my-app
+velocity dev
+      </div>
+      <div class="cta-buttons">
+        <a href="https://github.com/pochita1998/velocity-framework" class="btn btn-primary">View on GitHub</a>
+        <a href="/examples/counter" class="btn btn-secondary">Try Demo</a>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🚀</div>
+        <h3 class="feature-title">Blazing Fast</h3>
+        <p class="feature-desc">Rust-based compiler compiles your code in ~1ms. 10-40x faster than Webpack or Babel.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔥</div>
+        <h3 class="feature-title">Hot Module Replacement</h3>
+        <p class="feature-desc">See changes instantly with &lt;50ms HMR. Visual notifications and error overlay included.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚛️</div>
+        <h3 class="feature-title">Fine-Grained Reactivity</h3>
+        <p class="feature-desc">SolidJS-style signals with automatic tracking. No Virtual DOM overhead.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3 class="feature-title">Direct DOM Manipulation</h3>
+        <p class="feature-desc">Surgical updates to exactly what changed. Maximum performance, minimal overhead.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3 class="feature-title">Tiny Bundle</h3>
+        <p class="feature-desc">Just 33KB gzipped runtime. Smaller than most framework hello worlds.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚙️</div>
+        <h3 class="feature-title">Zero Config</h3>
+        <p class="feature-desc">Works out of the box. JSX, TypeScript, and HMR included.</p>
+      </div>
+    </div>
+
+    <div style="margin: 4rem 0;">
+      <h2 style="font-size: 2rem; text-align: center; margin-bottom: 2rem;">Write Familiar Code</h2>
+      <div class="code-block">
+<span class="keyword">import</span> { createSignal, render } <span class="keyword">from</span> <span class="string">'velocity-runtime'</span>;
+
+<span class="keyword">function</span> <span class="function">Counter</span>() {
+  <span class="keyword">const</span> [count, setCount] = <span class="function">createSignal</span>(<span class="string">0</span>);
+
+  <span class="keyword">return</span> (
+    <span class="tag">&lt;div&gt;</span>
+      <span class="tag">&lt;h1&gt;</span>Count: {count}<span class="tag">&lt;/h1&gt;</span>
+      <span class="tag">&lt;button</span> onClick={() => <span class="function">setCount</span>(count() + <span class="string">1</span>)}<span class="tag">&gt;</span>
+        Increment
+      <span class="tag">&lt;/button&gt;</span>
+    <span class="tag">&lt;/div&gt;</span>
+  );
+}
+
+<span class="function">render</span>(() => <span class="tag">&lt;Counter /&gt;</span>, document.<span class="function">getElementById</span>(<span class="string">'root'</span>));
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Built with ⚡ by the Velocity team</p>
+    <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+      Open source under MIT License
+    </p>
+  </footer>
+
+  <script>
+    // Generate floating particles
+    const particlesContainer = document.getElementById('particles');
+    for (let i = 0; i < 50; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.animationDuration = (Math.random() * 3 + 2) + 's';
+      particle.style.animationDelay = Math.random() * 2 + 's';
+      particlesContainer.appendChild(particle);
+    }
+  </script>
+</body>
+</html>
