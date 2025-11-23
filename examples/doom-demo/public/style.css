@@ -1,0 +1,62 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.game-container {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+canvas {
+  border: 2px solid #333;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 60px rgba(255, 0, 0, 0.3);
+  cursor: crosshair;
+}
+
+.controls {
+  margin-top: 30px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  border: 1px solid #333;
+}
+
+.controls h2 {
+  color: #ff0000;
+  font-size: 2rem;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+  margin-bottom: 15px;
+}
+
+.controls p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.controls ul {
+  list-style: none;
+  margin: 15px 0;
+}
+
+.controls li {
+  margin: 8px 0;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+  border-left: 3px solid #ff0000;
+}
+
+.controls li:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

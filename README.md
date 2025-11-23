@@ -10,6 +10,7 @@ A blazingly fast JavaScript framework powered by Rust. Velocity combines the fin
 - **🎯 Familiar Syntax**: Use JSX/TSX like React
 - **🔥 Hot Module Replacement**: Instant updates with full state preservation
 - **📦 Tiny Bundle**: Just 33KB gzipped runtime
+- **🎮 Game-Ready**: Built-in game loop, input handling, and Canvas refs
 - **⚙️ Zero Config**: Works out of the box
 
 ## 🚀 Quick Start
@@ -194,6 +195,46 @@ createEffect(() => {
 const doubled = createMemo(() => count() * 2);
 ```
 
+### Control Flow
+
+```tsx
+import { For, Show } from 'velocity-runtime';
+
+// List rendering with efficient keyed updates
+<For each={items()}>
+  {(item, index) => <div>{item.name}</div>}
+</For>
+
+// Conditional rendering
+<Show when={isLoggedIn()} fallback={<Login />}>
+  <Dashboard />
+</Show>
+```
+
+### Game Development
+
+```tsx
+import { useAnimationFrame, useKeyboard, useMouse, createRef } from 'velocity-runtime';
+
+function Game() {
+  const canvasRef = createRef();
+  const keys = useKeyboard();
+  const mouse = useMouse();
+
+  // Game loop with automatic cleanup
+  useAnimationFrame((time, deltaTime) => {
+    // Update game state
+    if (keys()['ArrowUp']) movePlayer();
+
+    // Render at 60 FPS
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.fillRect(0, 0, 800, 600);
+  });
+
+  return <canvas ref={canvasRef} width="800" height="600" />;
+}
+```
+
 ### Rendering
 
 ```tsx
@@ -265,15 +306,25 @@ velocity analyze --format json > bundle-analysis.json
 Check out the `/examples` directory:
 
 - **counter** - Simple counter with signals and memos
-- **todo-app** - Todo list with CRUD operations
-- **landing** - Beautiful animated landing page
+- **doom-demo** - 🎮 DOOM-style raycaster game (game dev showcase)
 
 Run examples:
 
 ```bash
-cd examples/counter
+cd examples/doom-demo
 velocity dev
 ```
+
+### DOOM Demo Features
+The DOOM raycaster demo showcases Velocity's game development capabilities:
+- Real-time 3D raycasting at 60 FPS
+- Keyboard (WASD/Arrows) + Mouse controls
+- Collision detection
+- Minimap rendering
+- FPS counter
+- All powered by `useAnimationFrame`, `useKeyboard`, `useMouse`, and `createRef`
+
+See [examples/doom-demo/README.md](examples/doom-demo/README.md) for technical details.
 
 ## 🛠️ Development
 
