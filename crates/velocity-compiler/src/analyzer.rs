@@ -6,7 +6,7 @@
 //! - Dependency graphs for effects
 //! - Optimization opportunities
 
-use crate::error::{CompilerError, Result};
+use crate::error::Result;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{Visit, VisitWith};
 use std::collections::{HashMap, HashSet};

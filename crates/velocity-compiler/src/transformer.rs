@@ -16,11 +16,12 @@
 //! ```
 
 use crate::analyzer::Analysis;
-use crate::error::{CompilerError, Result};
+use crate::error::Result;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 
 /// Transformer that converts JSX to DOM operations
+#[allow(dead_code)]
 struct JsxTransformer {
     analysis: Analysis,
     element_counter: usize,
@@ -35,12 +36,14 @@ impl JsxTransformer {
     }
 
     /// Generate a unique element variable name
+    #[allow(dead_code)]
     fn next_element_name(&mut self) -> String {
         self.element_counter += 1;
         format!("_el{}", self.element_counter)
     }
 
     /// Check if an identifier is reactive (signal or memo)
+    #[allow(dead_code)]
     fn is_reactive(&self, name: &str) -> bool {
         self.analysis.signals.contains(name) || self.analysis.memos.contains(name)
     }
@@ -177,8 +180,8 @@ impl JsxTransformer {
     fn transform_component_element(
         &mut self,
         name: &str,
-        attrs: &[JSXAttrOrSpread],
-        children: &[JSXElementChild],
+        _attrs: &[JSXAttrOrSpread],
+        _children: &[JSXElementChild],
     ) -> Expr {
         // Call the component as a function with props
         Expr::Call(CallExpr {

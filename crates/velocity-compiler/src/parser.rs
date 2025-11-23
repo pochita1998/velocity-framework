@@ -8,7 +8,7 @@ use swc_core::common::{
     SourceMap, FileName,
 };
 use swc_core::ecma::ast::Module;
-use swc_core::ecma::parser::{lexer::Lexer, Parser, StringInput, Syntax, TsSyntax, EsSyntax};
+use swc_core::ecma::parser::{lexer::Lexer, Parser, StringInput, Syntax, TsSyntax};
 
 /// Parse a source file into a SWC AST
 pub fn parse(source: &str, filename: &str) -> Result<Module> {

@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+#[allow(dead_code)]
 pub struct ModuleGraph {
     modules: HashMap<PathBuf, crate::Module>,
 }
 
+#[allow(dead_code)]
 impl ModuleGraph {
     pub fn new() -> Self {
         Self {

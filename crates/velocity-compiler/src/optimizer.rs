@@ -8,12 +8,13 @@
 //! - Unused import removal
 
 use crate::analyzer::Analysis;
-use crate::error::{CompilerError, Result};
+use crate::error::Result;
 use swc_core::ecma::ast::*;
 use swc_core::ecma::visit::{VisitMut, VisitMutWith};
 use std::collections::HashSet;
 
 /// Optimizer that applies optimization passes
+#[allow(dead_code)]
 struct Optimizer {
     analysis: Analysis,
     used_identifiers: HashSet<String>,
