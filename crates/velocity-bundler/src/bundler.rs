@@ -1,7 +1,6 @@
 use anyhow::Result;
 use std::path::PathBuf;
 use std::fs;
-use walkdir::WalkDir;
 
 #[derive(Debug, Clone)]
 pub struct BundlerConfig {

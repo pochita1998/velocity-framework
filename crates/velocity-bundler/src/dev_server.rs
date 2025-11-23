@@ -1,11 +1,9 @@
 use anyhow::Result;
 use axum::{
-    extract::State,
     response::{Html, IntoResponse},
     routing::get,
     Router,
 };
-use std::sync::Arc;
 use tower_http::services::ServeDir;
 
 pub struct DevServer {
@@ -57,7 +55,7 @@ async fn serve_index() -> Html<&'static str> {
 async fn serve_client() -> impl IntoResponse {
     (
         [("Content-Type", "application/javascript")],
-        include_str!("../../../packages/velocity-runtime/dist/index.js")
+        include_str!("../../velocity-wasm/pkg/velocity_wasm.js")
     )
 }
 

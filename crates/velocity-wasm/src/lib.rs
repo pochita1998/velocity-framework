@@ -357,6 +357,7 @@ pub fn get_islands_to_hydrate() -> Result<js_sys::Array, JsValue> {
 // Data Layer (Phase 5) - Resource Management
 // ============================================================================
 
+#[allow(dead_code)]
 type ResourceId = usize;
 
 thread_local! {
